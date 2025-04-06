@@ -1,0 +1,15 @@
+github.com/andreimerlescu/checkfs v1.0.1 h1:4w4tPgI20NEkVQbhES8GwgJDBuLpPdbdzYgI6blzI/k=
+github.com/andreimerlescu/checkfs v1.0.1/go.mod h1:VBk2qYxPz4l8nbLnT2I9LYHJ8ygxRxAJv14dBYJQCrw=
+github.com/andreimerlescu/figtree/v2 v2.0.3 h1:BfBGZ7729shM9jvl2nHnumQJjpP51C3MEGe6TXJQu0c=
+github.com/andreimerlescu/figtree/v2 v2.0.3/go.mod h1:cIwo9LqOWCjnB3354D34U7KH9D30PdVUqkdq4BncCzY=
+github.com/andreimerlescu/sema v1.0.0 h1:8ai/kqAci7QKUenAJWX13aYtWpjvD0CQW39CFzNIRQs=
+github.com/andreimerlescu/sema v1.0.0/go.mod h1:VCRQkKVknOKKPtAqvrNHL7hxxfoX5O7it2lWBzVxUs0=
+github.com/go-ini/ini v1.67.0 h1:z6ZrTEZqSWOTyH2FlglNbNgARyHG8oLW9gMELqKr06A=
+github.com/go-ini/ini v1.67.0/go.mod h1:ByCAeIL28uOIIG0E3PJtZPDL8WnHpFKFOtgjp+3Ies8=
+golang.org/x/sys v0.31.0 h1:ioabZlmFYtWhL+TRYpcnNlLwhyxaM9kWTDEmfnprqik=
+golang.org/x/sys v0.31.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
+golang.org/x/term v0.30.0 h1:PQ39fJZ+mfadBm0y5WlL4vlM7Sx1Hgf13sMIY2+QS9Y=
+golang.org/x/term v0.30.0/go.mod h1:NYYFdzHoI5wRh/h5tDMdMqCqPJZEuNqVR5xJLd/n67g=
+gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
+gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=

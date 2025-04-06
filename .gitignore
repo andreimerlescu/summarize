@@ -1,0 +1,5 @@
+summarize
+.idea
+.DS_Store
+*.log
+summaries/
