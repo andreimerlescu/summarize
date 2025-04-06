@@ -15,46 +15,49 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1
+      # Step 1: Check out the repository containing the summarize tool
       - name: Checkout summarize repository
         uses: actions/checkout@v4
 
-      # Step 2
+      # Step 2: Set up Go environment
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.24.0'
 
-      # Step 3
+      # Step 3: Build the summarize tool
       - name: Build summarize
         run: go build -o summarize .
 
-      # Step 4
+      # Step 4: Clone the figtree repository
       - name: Clone figtree repository
-        run: git clone https://github.com/andreimerlescu/figtree.git
+        run: git clone https://github.com/andreimerlescu/figtree.git ${{ github.workspace }}/figtree
 
-      # Test 1
-      # Step 5
+      # Test 1: Basic Usage
+      # Step 5: Navigate into the figtree directory and run summarize
       - name: Run summarize on figtree (basic usage)
         run: |
-          cd figtree
-          ../summarize
+          cd ${{ github.workspace }}/figtree
+          ${{ github.workspace }}/summarize
           ls -lh summaries/
 
-      # Step 6
+      # Step 6: Find the generated summary file (basic usage)
       - name: Find summary file (basic usage)
         id: find-summary-basic
         run: |
-          cd figtree
-          SUMMARY_FILE=$(ls summaries/summary.*.md | head -n 1)
+          SUMMARY_FILE=$(ls ${{ github.workspace }}/figtree/summaries/summary.*.md | head -n 1)
           echo "summary_file=$SUMMARY_FILE" >> $GITHUB_OUTPUT
           echo "Found summary file: $SUMMARY_FILE"
 
-      # Step 7
+      # Step 7: Verify the summary file size is over 1KB
       - name: Verify summary file size (basic usage)
         run: |
           SUMMARY_FILE="${{ steps.find-summary-basic.outputs.summary_file }}"
-          FILE_SIZE=$(stat -c %s "$SUMMARY_FILE") # Linux
+          if [ ! -f "$SUMMARY_FILE" ]; then
+            echo "Error: Summary file $SUMMARY_FILE not found"
+            exit 1
+          fi
+          FILE_SIZE=$(stat -c %s "$SUMMARY_FILE")
           echo "Summary file size: $FILE_SIZE bytes"
           if [ "$FILE_SIZE" -lt 1024 ]; then
             echo "Error: Summary file is less than 1KB ($FILE_SIZE bytes)"
@@ -62,20 +65,24 @@ jobs:
           fi
           echo "Summary file size is $FILE_SIZE bytes, which is greater than 1KB"
 
-      # Step 8
+      # Step 8: Select a random Go file from the figtree directory
       - name: Select a random Go file (basic usage)
         id: select-file-basic
         run: |
-          cd figtree
+          cd ${{ github.workspace }}/figtree
           RANDOM_FILE=$(find . -type f -name "*.go" | shuf -n 1)
+          # Convert to absolute path
+          RANDOM_FILE_ABS="${{ github.workspace }}/figtree/$RANDOM_FILE"
           echo "random_file=$RANDOM_FILE" >> $GITHUB_OUTPUT
+          echo "random_file_abs=$RANDOM_FILE_ABS" >> $GITHUB_OUTPUT
           echo "Selected random file: $RANDOM_FILE"
 
-      # Step 9
+      # Step 9: Verify the summary contains the source code of the random file
       - name: Verify summary contains random file's source code (basic usage)
         run: |
           SUMMARY_FILE="${{ steps.find-summary-basic.outputs.summary_file }}"
           RANDOM_FILE="${{ steps.select-file-basic.outputs.random_file }}"
+          RANDOM_FILE_ABS="${{ steps.select-file-basic.outputs.random_file_abs }}"
           echo "Checking if $SUMMARY_FILE contains the source code of $RANDOM_FILE"
 
           # Extract the section for the random file from the summary
@@ -86,7 +93,7 @@ jobs:
           fi
 
           # Extract the code block (between ```go and ```)
-          CODE_START=$((SECTION_START + 2)) # Skip the ## line and the blank line
+          CODE_START=$((SECTION_START + 2))
           CODE_END=$(tail -n +$CODE_START "$SUMMARY_FILE" | grep -n "^\`\`\`$" | head -n 1 | cut -d: -f1)
           if [ -z "$CODE_END" ]; then
             echo "Error: Could not find code block end for $RANDOM_FILE in $SUMMARY_FILE"
@@ -96,9 +103,9 @@ jobs:
           tail -n +$CODE_START "$SUMMARY_FILE" | head -n $CODE_LINES > extracted_code.txt
 
           # Read the original file content
-          cat "$RANDOM_FILE" > original_code.txt
+          cat "$RANDOM_FILE_ABS" > original_code.txt
 
-          # Compare the extracted code with the original file
+          # Compare
           diff -wB extracted_code.txt original_code.txt > diff_output.txt
           if [ $? -ne 0 ]; then
             echo "Error: The source code in the summary does not match the original file"
@@ -107,38 +114,41 @@ jobs:
           fi
           echo "Success: The source code of $RANDOM_FILE in $SUMMARY_FILE matches the original file"
 
-      # Test 2
-      # Step 10
+      # Test 2: Config File Usage
+      # Step 10: Create a config file for summarize
       - name: Create summarize config file
         run: |
-          mkdir -p config
-          cat <<EOF > config/summarize.config.yaml
-          {"i": "go,sh,ts", "d": "$(pwd)/figtree", "o": "$(pwd)/figtree/config-summaries"}
+          mkdir -p ${{ github.workspace }}/config
+          cat <<EOF > ${{ github.workspace }}/config/summarize.config.yaml
+          {"i": "go,sh,ts", "d": "${{ github.workspace }}/figtree", "o": "${{ github.workspace }}/figtree/config-summaries"}
           EOF
-          cat config/summarize.config.yaml
+          cat ${{ github.workspace }}/config/summarize.config.yaml
 
-      # Step 11
+      # Step 11: Run summarize with config file
       - name: Run summarize with config file
         env:
           SUMMARIZE_CONFIG_FILE: ${{ github.workspace }}/config/summarize.config.yaml
         run: |
-          cd figtree
-          ../summarize
+          cd ${{ github.workspace }}/figtree
+          ${{ github.workspace }}/summarize
           ls -lh config-summaries/
 
-      # Step 12
+      # Step 12: Find the generated summary file (config usage)
       - name: Find summary file (config usage)
         id: find-summary-config
         run: |
-          cd figtree
-          SUMMARY_FILE=$(ls config-summaries/summary.*.md | head -n 1)
+          SUMMARY_FILE=$(ls ${{ github.workspace }}/figtree/config-summaries/summaries.*.md | head -n 1)
           echo "summary_file=$SUMMARY_FILE" >> $GITHUB_OUTPUT
           echo "Found summary file: $SUMMARY_FILE"
 
-      # Step 13
+      # Step 13: Verify the summary file size (config usage)
       - name: Verify summary file size (config usage)
         run: |
           SUMMARY_FILE="${{ steps.find-summary-config.outputs.summary_file }}"
+          if [ ! -f "$SUMMARY_FILE" ]; then
+            echo "Error: Summary file $SUMMARY_FILE not found"
+            exit 1
+          fi
           FILE_SIZE=$(stat -c %s "$SUMMARY_FILE")
           echo "Summary file size: $FILE_SIZE bytes"
           if [ "$FILE_SIZE" -lt 1024 ]; then
@@ -147,33 +157,37 @@ jobs:
           fi
           echo "Summary file size is $FILE_SIZE bytes, which is greater than 1KB"
 
-      # Test 3
-      # Step 14
+      # Test 3: Command-Line Arguments Usage
+      # Step 14: Create another project directory with a sample file
       - name: Create another project directory
         run: |
-          mkdir -p anotherProject
-          echo -e "package main\n\nfunc main() {\n    println(\"Hello, World!\")\n}" > anotherProject/hello.go
-          mkdir -p custom-summaries
+          mkdir -p ${{ github.workspace }}/anotherProject
+          echo -e "package main\n\nfunc main() {\n    println(\"Hello, World!\")\n}" > ${{ github.workspace }}/anotherProject/hello.go
+          mkdir -p ${{ github.workspace }}/custom-summaries
 
-      # Step 15
+      # Step 15: Run summarize with command-line arguments
       - name: Run summarize with command-line arguments
         run: |
-          cd anotherProject
-          ../summarize -d . -o ${{ github.workspace }}/custom-summaries
+          cd ${{ github.workspace }}/anotherProject
+          ${{ github.workspace }}/summarize -d . -o ${{ github.workspace }}/custom-summaries
           ls -lh ${{ github.workspace }}/custom-summaries/
 
-      # Step 16
+      # Step 16: Find the generated summary file (command-line usage)
       - name: Find summary file (command-line usage)
         id: find-summary-cli
         run: |
-          SUMMARY_FILE=$(ls ${{ github.workspace }}/custom-summaries/summary.*.md | head -n 1)
+          SUMMARY_FILE=$(ls ${{ github.workspace }}/custom-summaries/summaries.*.md | head -n 1)
           echo "summary_file=$SUMMARY_FILE" >> $GITHUB_OUTPUT
           echo "Found summary file: $SUMMARY_FILE"
 
-      # Step 17
+      # Step 17: Verify the summary file size (command-line usage)
       - name: Verify summary file size (command-line usage)
         run: |
           SUMMARY_FILE="${{ steps.find-summary-cli.outputs.summary_file }}"
+          if [ ! -f "$SUMMARY_FILE" ]; then
+            echo "Error: Summary file $SUMMARY_FILE not found"
+            exit 1
+          fi
           FILE_SIZE=$(stat -c %s "$SUMMARY_FILE")
           echo "Summary file size: $FILE_SIZE bytes"
           if [ "$FILE_SIZE" -lt 1024 ]; then
@@ -182,11 +196,12 @@ jobs:
           fi
           echo "Summary file size is $FILE_SIZE bytes, which is greater than 1KB"
 
-      # Step 18
+      # Step 18: Verify the summary contains the hello.go source code
       - name: Verify summary contains hello.go source code (command-line usage)
         run: |
           SUMMARY_FILE="${{ steps.find-summary-cli.outputs.summary_file }}"
           RANDOM_FILE="hello.go"
+          RANDOM_FILE_ABS="${{ github.workspace }}/anotherProject/hello.go"
           echo "Checking if $SUMMARY_FILE contains the source code of $RANDOM_FILE"
 
           # Extract the section for hello.go
@@ -207,7 +222,7 @@ jobs:
           tail -n +$CODE_START "$SUMMARY_FILE" | head -n $CODE_LINES > extracted_code.txt
 
           # Read the original file content
-          cat "anotherProject/$RANDOM_FILE" > original_code.txt
+          cat "$RANDOM_FILE_ABS" > original_code.txt
 
           # Compare
           diff -wB extracted_code.txt original_code.txt > diff_output.txt
@@ -218,8 +233,8 @@ jobs:
           fi
           echo "Success: The source code of $RANDOM_FILE in $SUMMARY_FILE matches the original file"
 
-      # Test 4
-      # Step 19
+      # Test 4: Verify Output Structure
+      # Step 19: Verify the summary file structure (basic usage)
       - name: Verify summary file structure (basic usage)
         run: |
           SUMMARY_FILE="${{ steps.find-summary-basic.outputs.summary_file }}"
