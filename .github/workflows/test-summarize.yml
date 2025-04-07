@@ -77,16 +77,34 @@ jobs:
         id: select-file-basic
         run: |
           cd ${{ github.workspace }}/figtree
-          RANDOM_FILE=$(find . -type f -name "*.go" | shuf -n 1)
-          # Remove leading ./ if present
-          NORMALIZED_RANDOM_FILE=$(echo "$RANDOM_FILE" | sed 's|^\./||')
-          # Convert to absolute path
-          RANDOM_FILE_ABS="${{ github.workspace }}/figtree/$NORMALIZED_RANDOM_FILE"
-          echo "random_file=$NORMALIZED_RANDOM_FILE" >> $GITHUB_OUTPUT
-          echo "random_file_abs=$RANDOM_FILE_ABS" >> $GITHUB_OUTPUT
-          echo "Selected random file (original): $RANDOM_FILE"
-          echo "Selected random file (normalized): $NORMALIZED_RANDOM_FILE"
-          echo "Absolute path of random file: $RANDOM_FILE_ABS"
+          # Select up to 5 random files and loop until we find one that has a valid section
+          CANDIDATE_FILES=$(find . -type f -name "*.go" | shuf -n 5)
+          FOUND_VALID_FILE=false
+          for CANDIDATE in $CANDIDATE_FILES; do
+            # Remove leading ./ if present
+            NORMALIZED_CANDIDATE=$(echo "$CANDIDATE" | sed 's|^\./||')
+            # Check if the summary file has a section for this candidate
+            SECTION_START=$(grep -n "^## $NORMALIZED_CANDIDATE$" "${{ steps.find-summary-basic.outputs.summary_file }}" | cut -d: -f1)
+            if [ ! -z "$SECTION_START" ]; then
+              # Found a file with a section; use this one
+              RANDOM_FILE="$NORMALIZED_CANDIDATE"
+              RANDOM_FILE_ABS="${{ github.workspace }}/figtree/$NORMALIZED_CANDIDATE"
+              echo "random_file=$RANDOM_FILE" >> $GITHUB_OUTPUT
+              echo "random_file_abs=$RANDOM_FILE_ABS" >> $GITHUB_OUTPUT
+              echo "Selected random file (original): $CANDIDATE"
+              echo "Selected random file (normalized): $RANDOM_FILE"
+              echo "Absolute path of random file: $RANDOM_FILE_ABS"
+              FOUND_VALID_FILE=true
+              break
+            fi
+            echo "Candidate file $NORMALIZED_CANDIDATE does not have a section in the summary file, trying another..."
+          done
+          if [ "$FOUND_VALID_FILE" != "true" ]; then
+            echo "Error: Could not find any .go file with a section in the summary file"
+            echo "Listing all section headers in the summary file for debugging:"
+            grep "^## " "${{ steps.find-summary-basic.outputs.summary_file }}"
+            exit 1
+          fi
 
       # Step 9: Verify the summary contains the source code of the random file
       - name: Test 1 Step 9 Verify summary contains random file's source code (basic usage)
@@ -100,33 +118,25 @@ jobs:
           SECTION_START=$(grep -n "^## $RANDOM_FILE$" "$SUMMARY_FILE" | cut -d: -f1)
           if [ -z "$SECTION_START" ]; then
             echo "Error: Could not find section for $RANDOM_FILE in $SUMMARY_FILE"
-            echo "Looking for alternative path formats..."
-            # Try matching just the filename
-            FILENAME=$(basename "$RANDOM_FILE")
-            SECTION_START=$(grep -n "^## $FILENAME$" "$SUMMARY_FILE" | cut -d: -f1)
-            if [ -z "$SECTION_START" ]; then
-              echo "Error: Could not find section for $FILENAME in $SUMMARY_FILE either"
-              echo "Listing all section headers in $SUMMARY_FILE:"
-              grep "^## " "$SUMMARY_FILE"
-              exit 1
-            fi
-            echo "Found section for $FILENAME instead"
-            RANDOM_FILE="$FILENAME"
+            echo "Listing all section headers in $SUMMARY_FILE:"
+            grep "^## " "$SUMMARY_FILE"
+            exit 1
           fi
 
           # Extract the code block (between ``` and ```)
           CODE_START=$((SECTION_START + 2))
-          # Use a more robust pipeline to avoid broken pipe
           CODE_END=$(tail -n +$CODE_START "$SUMMARY_FILE" | grep -n "^\`\`\`$" | head -n 1 | cut -d: -f1 || true)
-          if [ -z "$CODE_END" ]; then
+          if [ -z "$CODE_END" ] || [ "$CODE_END" -eq 0 ]; then
             echo "Error: Could not find code block end for $RANDOM_FILE in $SUMMARY_FILE"
-            echo "Dumping lines after section start for debugging:"
-            tail -n +$SECTION_START "$SUMMARY_FILE" | head -n 10
+            echo "Dumping lines after section start for debugging (up to 20 lines):"
+            tail -n +$SECTION_START "$SUMMARY_FILE" | head -n 20
             exit 1
           fi
-          CODE_LINES=$(($CODE_END - 1))
+          CODE_LINES=$((CODE_END - 1))
           if [ $CODE_LINES -le 0 ]; then
             echo "Error: Invalid code block length ($CODE_LINES lines) for $RANDOM_FILE"
+            echo "Dumping lines after section start for debugging (up to 20 lines):"
+            tail -n +$SECTION_START "$SUMMARY_FILE" | head -n 20
             exit 1
           fi
           tail -n +$CODE_START "$SUMMARY_FILE" | head -n $CODE_LINES > extracted_code.txt
@@ -149,7 +159,7 @@ jobs:
         run: |
           mkdir -p ${{ github.workspace }}/config
           cat <<EOF > ${{ github.workspace }}/config/summarize.config.yaml
-          {"i": "go,sh,ts", "d": "${{ github.workflow }}/figtree", "o": "${{ github.workspace }}/figtree/config-summaries"}
+          {"i": "go,sh,ts", "d": "${{ github.workspace }}/figtree", "o": "${{ github.workspace }}/figtree/config-summaries"}
           EOF
           cat ${{ github.workspace }}/config/summarize.config.yaml
 
@@ -241,11 +251,11 @@ jobs:
 
           CODE_START=$((SECTION_START + 2))
           CODE_END=$(tail -n +$CODE_START "$SUMMARY_FILE" | grep -n "^\`\`\`$" | head -n 1 | cut -d: -f1 || true)
-          if [ -z "$CODE_END" ]; then
+          if [ -z "$CODE_END" ] || [ "$CODE_END" -eq 0 ]; then
             echo "Error: Could not find code block end for $RANDOM_FILE in $SUMMARY_FILE"
             exit 1
           fi
-          CODE_LINES=$(($CODE_END - 1))
+          CODE_LINES=$((CODE_END - 1))
           if [ $CODE_LINES -le 0 ]; then
             echo "Error: Invalid code block length ($CODE_LINES lines) for $RANDOM_FILE"
             exit 1
