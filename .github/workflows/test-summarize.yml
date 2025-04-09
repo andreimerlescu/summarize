@@ -12,7 +12,12 @@ on:
 
 jobs:
   test-summarize:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [Ubuntu-latest, macOS-latest]
+        go-version: ['1.23.8', '1.24.2']
+      fail-fast: false  # Continue testing all combinations even if one fails
 
     steps:
       # Step 1: Check out the repository containing the summarize tool
@@ -23,26 +28,34 @@ jobs:
       - name: Test 1 Step 2 Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24.0'
+          go-version: ${{ matrix.go-version }}
+
+      - name: Change directories
+        shell: bash
+        run: |
+          cd ${{ github.workspace }}
 
       # Step 3: Build the summarize tool
       - name: Test 1 Step 3 Build summarize
         run: go build -o summarize .
+        shell: bash
 
-      # Test 1: Command-Line Arguments Usage (formerly Test 3)
+
+      # Test 1: Command-Line Arguments Usage
       # Step 4: Create another project directory with a sample file
       - name: Test 1 Step 4 Create another project directory
         run: |
           mkdir -p ${{ github.workspace }}/anotherProject
           echo -e "package main\n\nfunc main() {\n    println(\"Hello, World!\")\n}" > ${{ github.workspace }}/anotherProject/hello.go
           mkdir -p ${{ github.workspace }}/summaries
+        shell: bash
 
-      # Step 5: Run summarize with command-line arguments
       - name: Test 1 Step 5 Run summarize with command-line arguments
         run: |
           cd ${{ github.workspace }}/anotherProject
           ${{ github.workspace }}/summarize -d . -o ${{ github.workspace }}/summaries
           ls -lh ${{ github.workspace }}/summaries/
+        shell: bash
 
       # Step 6: Find the generated summary file (command-line usage)
       - name: Test 1 Step 6 Find summary file (command-line usage)
@@ -51,6 +64,7 @@ jobs:
           SUMMARY_FILE=$(ls ${{ github.workspace }}/summaries/summary.*.md | head -n 1)
           echo "summary_file=$SUMMARY_FILE" >> $GITHUB_OUTPUT
           echo "Found summary file: $SUMMARY_FILE"
+        shell: bash
 
       # Step 7: Verify the summary file size (command-line usage)
       - name: Test 1 Step 7 Verify summary file size (command-line usage)
@@ -60,10 +74,65 @@ jobs:
             echo "Error: Summary file $SUMMARY_FILE not found"
             exit 1
           fi
-          FILE_SIZE=$(stat -c %s "$SUMMARY_FILE")
+          FILE_SIZE=$(python3 -c "import os; print(os.path.getsize('$SUMMARY_FILE'))")
           echo "Summary file size: $FILE_SIZE bytes"
-          if [ "$FILE_SIZE" -lt 171 ]; then
-            echo "Error: Summary file is less than 171 B ($FILE_SIZE bytes)"
+          if [ "$FILE_SIZE" -lt 100 ]; then
+            echo "Error: Summary file is less than 100 bytes ($FILE_SIZE bytes)"
             exit 1
           fi
-          echo "Summary file size is $FILE_SIZE bytes"
+          echo "Summary file size is $FILE_SIZE bytes, which is greater than 100 bytes"
+        shell: bash
+
+      # Step 8: Debug - Output the summary file contents
+      - name: Test 1 Step 8 Debug - Output summary file contents (command-line usage)
+        run: |
+          SUMMARY_FILE="${{ steps.find-summary-cli.outputs.summary_file }}"
+          echo "Contents of $SUMMARY_FILE:"
+          cat "$SUMMARY_FILE"
+        shell: bash
+
+      # Step 9: Verify the summary contains the hello.go source code
+      - name: Test 1 Step 9 Verify summary contains hello.go source code (command-line usage)
+        run: |
+          SUMMARY_FILE="${{ steps.find-summary-cli.outputs.summary_file }}"
+          RANDOM_FILE="hello.go"
+          RANDOM_FILE_ABS="${{ github.workspace }}/anotherProject/hello.go"
+          echo "Checking if $SUMMARY_FILE contains the source code of $RANDOM_FILE"
+
+          SECTION_START=$(grep -n "^## $RANDOM_FILE$" "$SUMMARY_FILE" | cut -d: -f1)
+          if [ -z "$SECTION_START" ]; then
+            echo "Error: Could not find section for $RANDOM_FILE in $SUMMARY_FILE"
+            echo "Listing all section headers in $SUMMARY_FILE:"
+            grep "^## " "$SUMMARY_FILE"
+            exit 1
+          fi
+
+          CODE_START=$((SECTION_START + 3))
+          CODE_END=$(tail -n +$CODE_START "$SUMMARY_FILE" | grep -n "^\`\`\`$" | head -n 1 | cut -d: -f1 || true)
+          if [ -z "$CODE_END" ] || [ "$CODE_END" -eq 0 ]; then
+            echo "Error: Could not find code block end for $RANDOM_FILE in $SUMMARY_FILE"
+            echo "Dumping lines after section start for debugging (up to 20 lines):"
+            tail -n +$SECTION_START "$SUMMARY_FILE" | head -n 20
+            exit 1
+          fi
+          CODE_LINES=$((CODE_END - 1))
+          if [ $CODE_LINES -le 0 ]; then
+            echo "Error: Invalid code block length ($CODE_LINES lines) for $RANDOM_FILE"
+            echo "Dumping lines after section start for debugging (up to 20 lines):"
+            tail -n +$SECTION_START "$SUMMARY_FILE" | head -n 20
+            exit 1
+          fi
+          tail -n +$CODE_START "$SUMMARY_FILE" > temp_code_block.txt
+          head -n $CODE_LINES temp_code_block.txt > extracted_code.txt
+          rm temp_code_block.txt
+
+          cat "$RANDOM_FILE_ABS" > original_code.txt
+
+          diff -wB extracted_code.txt original_code.txt > diff_output.txt
+          if [ $? -ne 0 ]; then
+            echo "Error: The source code in the summary does not match the original file"
+            cat diff_output.txt
+            exit 1
+          fi
+          echo "Success: The source code of $RANDOM_FILE in $SUMMARY_FILE matches the original file"
+        shell: bash

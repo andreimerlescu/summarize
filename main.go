@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"embed"
 	"fmt"
 	"io"
@@ -86,7 +85,6 @@ var newSummaryFilename = func() string {
 func init() {
 	figs = figtree.With(figtree.Options{
 		Harvest:           9,
-		Tracking:          true,
 		IgnoreEnvironment: true,
 		ConfigFile:        os.Getenv(eConfigFile),
 	})
@@ -102,31 +100,21 @@ func init() {
 	figs.NewBool(kVersion, false, "Display current version of summarize")
 	// validators
 	figs.WithValidator(kSourceDir, figtree.AssureStringNotEmpty)
-	figs.WithValidator(kSourceDir, figtree.AssureStringNotContains(`~`))
-	figs.WithCallback(kSourceDir, figtree.CallbackAfterVerify, callbackVerifyReadableDirectory)
 	figs.WithValidator(kOutputDir, figtree.AssureStringNotEmpty)
-	figs.WithValidator(kOutputDir, figtree.AssureStringNotContains(`~`))
-	figs.WithCallback(kOutputDir, figtree.CallbackAfterVerify, callbackVerifyWritableDirectory)
 	figs.WithValidator(kFilename, figtree.AssureStringNotEmpty)
-	figs.WithValidator(kFilename, figtree.AssureStringNotContains(`~`))
 	figs.WithValidator(kMaxFiles, figtree.AssureIntInRange(1, 63339))
 	// callbacks
+	figs.WithCallback(kSourceDir, figtree.CallbackAfterVerify, callbackVerifyReadableDirectory)
 	figs.WithCallback(kFilename, figtree.CallbackAfterVerify, callbackVerifyFile)
 	figs.WithCallback(kOutputDir, figtree.CallbackAfterVerify, func(value interface{}) error {
-		var path string
-		switch v := value.(type) {
-		case string:
-			path = v
-		case *string:
-			path = *v
-		default:
-			return fmt.Errorf("invalid type, expected string, got %T", value)
-		}
-		// check if path doesn't exist, and create it
-		if err := check.Directory(path, directory.Options{Exists: true}); err != nil {
-			capture(os.MkdirAll(path, 0755))
-		}
-		return nil
+		return check.Directory(toString(value), directory.Options{
+			WillCreate: true,
+			Create: directory.Create{
+				Kind:     directory.IfNotExists,
+				Path:     toString(value),
+				FileMode: 0755,
+			},
+		})
 	})
 	capture(figs.Load())
 }
@@ -136,9 +124,6 @@ func main() {
 		fmt.Println(Version())
 		os.Exit(0)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go watchFigtree(ctx)
 
 	var (
 		data      map[string][]string // data is map[ext][]path of found files to summarize
@@ -220,8 +205,8 @@ func main() {
 	}()
 
 	for ext, paths := range data { // range over data to get ext and paths
-		throttler.Acquire() // throttler is used to protect the runtime from excessive use
-		wg.Add(1)           // wg is used to prevent the runtime from exiting early
+		throttler.Acquire()                   // throttler is used to protect the runtime from excessive use
+		wg.Add(1)                             // wg is used to prevent the runtime from exiting early
 		go func(ext string, paths []string) { // run this extension in a goroutine
 			defer throttler.Release() // when we're done, release the throttler
 			defer wg.Done()           // then tell the sync.WaitGroup that we are done
@@ -270,19 +255,6 @@ func main() {
 		filepath.Join(*figs.String(kOutputDir), *figs.String(kFilename)))
 }
 
-func watchFigtree(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case mutation, ok := <-figs.Mutations():
-			if ok {
-				fmt.Printf("Mutation received: %v\n", mutation)
-			}
-		}
-	}
-}
-
 var callbackVerifyFile = func(value interface{}) error {
 	return check.File(toString(value), file.Options{Exists: false})
 }
@@ -291,21 +263,15 @@ var callbackVerifyReadableDirectory = func(value interface{}) error {
 	return check.Directory(toString(value), directory.Options{Exists: true, MorePermissiveThan: 0444})
 }
 
-var callbackVerifyWritableDirectory = func(value interface{}) error {
-	return check.Directory(toString(value), directory.Options{Exists: true, WillCreate: true, MorePermissiveThan: 0755})
-}
-
 var toString = func(value interface{}) string {
-	var s string
 	switch v := value.(type) {
 	case string:
-		s = v
+		return v
 	case *string:
-		s = *v
+		return *v
 	default:
 		return ""
 	}
-	return s
 }
 
 var capture = func(d ...error) {
@@ -313,10 +279,6 @@ var capture = func(d ...error) {
 		return
 	}
 	terminate(os.Stderr, "captured error: %v\n", d)
-}
-
-var capturei = func(_ int, d error) {
-	capture(d)
 }
 
 var terminate = func(d io.Writer, i string, e ...interface{}) {
