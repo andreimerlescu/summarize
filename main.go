@@ -100,15 +100,11 @@ func init() {
 	figs.NewBool(kVersion, false, "Display current version of summarize")
 	// validators
 	figs.WithValidator(kSourceDir, figtree.AssureStringNotEmpty)
-	figs.WithValidator(kSourceDir, figtree.AssureStringNotContains(`~`))
-	figs.WithCallback(kSourceDir, figtree.CallbackAfterVerify, callbackVerifyReadableDirectory)
 	figs.WithValidator(kOutputDir, figtree.AssureStringNotEmpty)
-	figs.WithValidator(kOutputDir, figtree.AssureStringNotContains(`~`))
-	// figs.WithCallback(kOutputDir, figtree.CallbackAfterVerify, callbackVerifyWritableDirectory)
 	figs.WithValidator(kFilename, figtree.AssureStringNotEmpty)
-	figs.WithValidator(kFilename, figtree.AssureStringNotContains(`~`))
 	figs.WithValidator(kMaxFiles, figtree.AssureIntInRange(1, 63339))
 	// callbacks
+	figs.WithCallback(kSourceDir, figtree.CallbackAfterVerify, callbackVerifyReadableDirectory)
 	figs.WithCallback(kFilename, figtree.CallbackAfterVerify, callbackVerifyFile)
 	figs.WithCallback(kOutputDir, figtree.CallbackAfterVerify, func(value interface{}) error {
 		return check.Directory(toString(value), directory.Options{
