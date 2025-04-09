@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"embed"
 	"fmt"
 	"io"
@@ -86,7 +85,6 @@ var newSummaryFilename = func() string {
 func init() {
 	figs = figtree.With(figtree.Options{
 		Harvest:           9,
-		Tracking:          true,
 		IgnoreEnvironment: true,
 		ConfigFile:        os.Getenv(eConfigFile),
 	})
@@ -141,9 +139,6 @@ func main() {
 		fmt.Println(Version())
 		os.Exit(0)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go watchFigtree(ctx)
 
 	var (
 		data      map[string][]string // data is map[ext][]path of found files to summarize
@@ -273,19 +268,6 @@ func main() {
 	// Print completion message
 	fmt.Printf("Summary generated: %s\n",
 		filepath.Join(*figs.String(kOutputDir), *figs.String(kFilename)))
-}
-
-func watchFigtree(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case mutation, ok := <-figs.Mutations():
-			if ok {
-				fmt.Printf("Mutation received: %v\n", mutation)
-			}
-		}
-	}
 }
 
 var callbackVerifyFile = func(value interface{}) error {

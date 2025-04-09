@@ -136,16 +136,16 @@ jobs:
       - name: Test 2 Step 10 Create summarize config file
         run: |
           mkdir -p ${{ github.workspace }}/config
-          cat <<EOF > ${{ github.workspace }}/config/summarize.config.yaml
+          cat <<EOF > ${{ github.workspace }}/config/summarize.config.json
           {"i": "go,sh,ts", "d": "${{ github.workspace }}/anotherProject", "o": "${{ github.workspace }}/config-summaries"}
           EOF
-          cat ${{ github.workspace }}/config/summarize.config.yaml
+          cat ${{ github.workspace }}/config/summarize.config.json
         shell: bash
 
       # Step 11: Run summarize with config file
       - name: Test 2 Step 11 Run summarize with config file
         env:
-          SUMMARIZE_CONFIG_FILE: ${{ github.workspace }}/config/summarize.config.yaml
+          SUMMARIZE_CONFIG_FILE: ${{ github.workspace }}/config/summarize.config.json
         run: |
           cd ${{ github.workspace }}/anotherProject
           ${{ github.workspace }}/summarize${{ matrix.os == 'Windows-latest' && '.exe' || '' }}
