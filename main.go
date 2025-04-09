@@ -106,7 +106,7 @@ func init() {
 	figs.WithCallback(kSourceDir, figtree.CallbackAfterVerify, callbackVerifyReadableDirectory)
 	figs.WithValidator(kOutputDir, figtree.AssureStringNotEmpty)
 	figs.WithValidator(kOutputDir, figtree.AssureStringNotContains(`~`))
-	figs.WithCallback(kOutputDir, figtree.CallbackAfterVerify, callbackVerifyWritableDirectory)
+	// figs.WithCallback(kOutputDir, figtree.CallbackAfterVerify, callbackVerifyWritableDirectory)
 	figs.WithValidator(kFilename, figtree.AssureStringNotEmpty)
 	figs.WithValidator(kFilename, figtree.AssureStringNotContains(`~`))
 	figs.WithValidator(kMaxFiles, figtree.AssureIntInRange(1, 63339))
@@ -123,9 +123,14 @@ func init() {
 			return fmt.Errorf("invalid type, expected string, got %T", value)
 		}
 		// check if path doesn't exist, and create it
-		if err := check.Directory(path, directory.Options{Exists: true}); err != nil {
-			capture(os.MkdirAll(path, 0755))
-		}
+		capture(check.Directory(path, directory.Options{
+			WillCreate: true,
+			Create: directory.Create{
+				Kind:     directory.IfNotExists,
+				Path:     path,
+				FileMode: 0755,
+			},
+		}))
 		return nil
 	})
 	capture(figs.Load())
@@ -291,10 +296,6 @@ var callbackVerifyReadableDirectory = func(value interface{}) error {
 	return check.Directory(toString(value), directory.Options{Exists: true, MorePermissiveThan: 0444})
 }
 
-var callbackVerifyWritableDirectory = func(value interface{}) error {
-	return check.Directory(toString(value), directory.Options{Exists: true, WillCreate: true, MorePermissiveThan: 0755})
-}
-
 var toString = func(value interface{}) string {
 	var s string
 	switch v := value.(type) {
@@ -313,10 +314,6 @@ var capture = func(d ...error) {
 		return
 	}
 	terminate(os.Stderr, "captured error: %v\n", d)
-}
-
-var capturei = func(_ int, d error) {
-	capture(d)
 }
 
 var terminate = func(d io.Writer, i string, e ...interface{}) {

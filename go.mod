@@ -3,7 +3,7 @@ module github.com/andreimerlescu/summarize
 go 1.23.7
 
 require (
-	github.com/andreimerlescu/checkfs v1.0.1
+	github.com/andreimerlescu/checkfs v1.0.2
 	github.com/andreimerlescu/figtree/v2 v2.0.3
 	github.com/andreimerlescu/sema v1.0.0
 )
