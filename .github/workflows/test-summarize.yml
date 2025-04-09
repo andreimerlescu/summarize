@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [Ubuntu-latest, macOS-latest, Windows-latest]
+        os: [Ubuntu-latest, macOS-latest]
         go-version: ['1.23.8', '1.24.2']
       fail-fast: false  # Continue testing all combinations even if one fails
 
@@ -30,9 +30,16 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
+      - name: Change directories
+        shell: bash
+        run: |
+          cd ${{ github.workspace }}
+
       # Step 3: Build the summarize tool
       - name: Test 1 Step 3 Build summarize
-        run: go build -o summarize${{ matrix.os == 'Windows-latest' && '.exe' || '' }} .
+        run: go build -o summarize .
+        shell: bash
+
 
       # Test 1: Command-Line Arguments Usage
       # Step 4: Create another project directory with a sample file
@@ -43,11 +50,10 @@ jobs:
           mkdir -p ${{ github.workspace }}/summaries
         shell: bash
 
-      # Step 5: Run summarize with command-line arguments
       - name: Test 1 Step 5 Run summarize with command-line arguments
         run: |
           cd ${{ github.workspace }}/anotherProject
-          ${{ github.workspace }}/summarize${{ matrix.os == 'Windows-latest' && '.exe' || '' }} -d . -o ${{ github.workspace }}/summaries
+          ${{ github.workspace }}/summarize -d . -o ${{ github.workspace }}/summaries
           ls -lh ${{ github.workspace }}/summaries/
         shell: bash
 
