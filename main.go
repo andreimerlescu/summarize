@@ -111,25 +111,14 @@ func init() {
 	// callbacks
 	figs.WithCallback(kFilename, figtree.CallbackAfterVerify, callbackVerifyFile)
 	figs.WithCallback(kOutputDir, figtree.CallbackAfterVerify, func(value interface{}) error {
-		var path string
-		switch v := value.(type) {
-		case string:
-			path = v
-		case *string:
-			path = *v
-		default:
-			return fmt.Errorf("invalid type, expected string, got %T", value)
-		}
-		// check if path doesn't exist, and create it
-		capture(check.Directory(path, directory.Options{
+		return check.Directory(toString(value), directory.Options{
 			WillCreate: true,
 			Create: directory.Create{
 				Kind:     directory.IfNotExists,
-				Path:     path,
+				Path:     toString(value),
 				FileMode: 0755,
 			},
-		}))
-		return nil
+		})
 	})
 	capture(figs.Load())
 }
@@ -279,16 +268,14 @@ var callbackVerifyReadableDirectory = func(value interface{}) error {
 }
 
 var toString = func(value interface{}) string {
-	var s string
 	switch v := value.(type) {
 	case string:
-		s = v
+		return v
 	case *string:
-		s = *v
+		return *v
 	default:
 		return ""
 	}
-	return s
 }
 
 var capture = func(d ...error) {

@@ -137,7 +137,7 @@ jobs:
         run: |
           mkdir -p ${{ github.workspace }}/config
           cat <<EOF > ${{ github.workspace }}/config/summarize.config.json
-          {"i": "go,sh,ts", "d": "${{ github.workspace }}/anotherProject", "o": "${{ github.workspace }}/config-summaries"}
+          {"i": ["go","sh","ts"], "d": "${{ github.workspace }}/anotherProject", "o": "${{ github.workspace }}/config-summaries"}
           EOF
           cat ${{ github.workspace }}/config/summarize.config.json
         shell: bash
