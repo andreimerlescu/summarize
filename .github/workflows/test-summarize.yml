@@ -101,7 +101,7 @@ jobs:
             exit 1
           fi
 
-          CODE_START=$((SECTION_START + 2))
+          CODE_START=$((SECTION_START + 3))
           CODE_END=$(tail -n +$CODE_START "$SUMMARY_FILE" | grep -n "^\`\`\`$" | head -n 1 | cut -d: -f1 || true)
           if [ -z "$CODE_END" ] || [ "$CODE_END" -eq 0 ]; then
             echo "Error: Could not find code block end for $RANDOM_FILE in $SUMMARY_FILE"
