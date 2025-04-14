@@ -50,6 +50,7 @@ const (
 	kVersion      string = "v"
 	kDotFiles     string = "ndf"
 	kMaxFiles     string = "mf"
+	kDebug        string = "debug"
 )
 
 var (
@@ -73,6 +74,7 @@ var (
 	// defaultAvoid are the -avoid list of substrings in file path names to avoid in the summary
 	defaultAvoid = []string{
 		".min.js", ".min.css", ".git/", ".svn/", ".vscode/", ".vs/", ".idea/", "logs/", "secrets/",
+		".venv/", "/site-packages",
 	}
 )
 
@@ -98,6 +100,7 @@ func init() {
 	figs.NewInt(kMaxFiles, 20, "Maximum number of files to process concurrently")
 	figs.NewBool(kDotFiles, false, "Include dot files by setting this true")
 	figs.NewBool(kVersion, false, "Display current version of summarize")
+	figs.NewBool(kDebug, false, "Enable debug mode")
 	// validators
 	figs.WithValidator(kSourceDir, figtree.AssureStringNotEmpty)
 	figs.WithValidator(kOutputDir, figtree.AssureStringNotEmpty)
@@ -158,6 +161,15 @@ func main() {
 			// check the -avoid list
 			for _, avoidThis := range *figs.List(kSkipContains) {
 				if strings.Contains(filename, avoidThis) {
+					if *figs.Bool(kDebug) {
+						fmt.Printf("ignoring %s\n", path)
+					}
+					return nil // skip without error
+				}
+				if strings.Contains(path, avoidThis) {
+					if *figs.Bool(kDebug) {
+						fmt.Printf("ignoring %s\n", path)
+					}
 					return nil // skip without error
 				}
 			}
@@ -170,6 +182,9 @@ func main() {
 			// check the -exc list
 			for _, excludeThis := range *figs.List(kExcludeExt) {
 				if strings.EqualFold(excludeThis, ext) {
+					if *figs.Bool(kDebug) {
+						fmt.Printf("ignoring %s\n", path)
+					}
 					return nil // skip without error
 				}
 			}
@@ -183,6 +198,13 @@ func main() {
 		// continue to the next file
 		return nil
 	}))
+
+	if *figs.Bool(kDebug) {
+		fmt.Println("data received: ")
+		for ext, paths := range data {
+			fmt.Printf("%s: %s\n", ext, strings.Join(paths, ", "))
+		}
+	}
 
 	maxFileSemaphore := sema.New(*figs.Int(kMaxFiles))
 	writeChan := make(chan []byte, 10240)
