@@ -74,7 +74,7 @@ var (
 	// defaultAvoid are the -avoid list of substrings in file path names to avoid in the summary
 	defaultAvoid = []string{
 		".min.js", ".min.css", ".git/", ".svn/", ".vscode/", ".vs/", ".idea/", "logs/", "secrets/",
-		".venv/", "/site-packages",
+		".venv/", "/site-packages", ".terraform/", "summaries/",
 	}
 )
 
@@ -227,8 +227,8 @@ func main() {
 	}()
 
 	for ext, paths := range data { // range over data to get ext and paths
-		throttler.Acquire()                   // throttler is used to protect the runtime from excessive use
-		wg.Add(1)                             // wg is used to prevent the runtime from exiting early
+		throttler.Acquire() // throttler is used to protect the runtime from excessive use
+		wg.Add(1)           // wg is used to prevent the runtime from exiting early
 		go func(ext string, paths []string) { // run this extension in a goroutine
 			defer throttler.Release() // when we're done, release the throttler
 			defer wg.Done()           // then tell the sync.WaitGroup that we are done
