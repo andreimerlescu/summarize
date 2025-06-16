@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         os: [Ubuntu-latest, macOS-latest]
-        go-version: ['1.23.8', '1.24.2']
+        go-version: ['1.24.0']
       fail-fast: false  # Continue testing all combinations even if one fails
 
     steps:
