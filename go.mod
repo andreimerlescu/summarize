@@ -1,6 +1,6 @@
 module github.com/andreimerlescu/summarize
 
-go 1.23.7
+go 1.24
 
 require (
 	github.com/andreimerlescu/checkfs v1.0.2

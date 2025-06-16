@@ -3,3 +3,4 @@ summarize
 .DS_Store
 *.log
 summaries/
+bin/

@@ -74,7 +74,7 @@ var (
 	// defaultAvoid are the -avoid list of substrings in file path names to avoid in the summary
 	defaultAvoid = []string{
 		".min.js", ".min.css", ".git/", ".svn/", ".vscode/", ".vs/", ".idea/", "logs/", "secrets/",
-		".venv/", "/site-packages", ".terraform/", "summaries/",
+		".venv/", "/site-packages", ".terraform/", "summaries/", "node_modules/",
 	}
 )
 
@@ -94,11 +94,11 @@ func init() {
 	figs.NewString(kSourceDir, ".", "Absolute path of directory you want to summarize.")
 	figs.NewString(kOutputDir, filepath.Join(".", "summaries"), fmt.Sprintf("Path of the directory to write the %s file to", newSummaryFilename()))
 	figs.NewString(kFilename, newSummaryFilename(), "Output file of summary.md")
-	figs.NewList(kIncludeExt, defaultInclude, "List of extensions to include in summary.")
-	figs.NewList(kExcludeExt, defaultExclude, "List of extensions to include in summary.")
-	figs.NewList(kSkipContains, defaultAvoid, "List of extensions to avoid.")
+	figs.NewList(kIncludeExt, defaultInclude, "List of extensions to INCLUDE in summary.")
+	figs.NewList(kExcludeExt, defaultExclude, "List of extensions to EXCLUDE in summary.")
+	figs.NewList(kSkipContains, defaultAvoid, "List of path substrings if present to skip over full path.")
 	figs.NewInt(kMaxFiles, 20, "Maximum number of files to process concurrently")
-	figs.NewBool(kDotFiles, false, "Include dot files by setting this true")
+	figs.NewBool(kDotFiles, false, "Any path that is considered a dotfile can be included by setting this to true")
 	figs.NewBool(kVersion, false, "Display current version of summarize")
 	figs.NewBool(kDebug, false, "Enable debug mode")
 	// validators
