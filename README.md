@@ -49,15 +49,12 @@ cd ~/work/anotherProject
 summarize -d anotherProject -o /home/user/summaries/anotherProject
 ```
 
-Since `figtree` is designed to be very functional, its lightweight but feature 
-intense design through simple biology memetics makes it well suited for this program. 
-
 ## Options
 
 | Name            | Argument | Type     | Usage                                                  |
 |-----------------|----------|----------|--------------------------------------------------------|
-| `kSourceDir`    | -d`      | `string` | Source directory path.                                 |
-| `kOutputDir`    | -o`      | `string` | Summary destination output directory path.             |
+| `kSourceDir`    | `-d`     | `string` | Source directory path.                                 |
+| `kOutputDir`    | `-o`     | `string` | Summary destination output directory path.             |
 | `kExcludeExt`   | `-x`     | `list`   | Comma separated string list of extensions to exclude.  |
 | `kSkipContains` | `-s`     | `list`   | Comma separated string to filename substrings to skip. |
 | `kIncludeExt`   | `-i`     | `list`   | Comma separated string of extensions to include.       |

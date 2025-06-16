@@ -55,7 +55,7 @@ const (
 
 var (
 	// figs is a figtree of fruit for configurable command line arguments that bear fruit
-	figs figtree.Fruit
+	figs figtree.Plant
 
 	// defaultExclude are the -exc list of extensions that will be skipped automatically
 	defaultExclude = []string{
