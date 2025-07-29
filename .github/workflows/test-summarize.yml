@@ -47,13 +47,12 @@ jobs:
         run: |
           mkdir -p ${{ github.workspace }}/anotherProject
           echo -e "package main\n\nfunc main() {\n    println(\"Hello, World!\")\n}" > ${{ github.workspace }}/anotherProject/hello.go
-          mkdir -p ${{ github.workspace }}/summaries
         shell: bash
 
       - name: Test 1 Step 5 Run summarize with command-line arguments
         run: |
-          cd ${{ github.workspace }}/anotherProject
-          ${{ github.workspace }}/summarize -d . -o ${{ github.workspace }}/summaries
+          cd ${{ github.workspace }}
+          ${{ github.workspace }}/summarize -d anotherProject -o ${{ github.workspace }}/summaries
           ls -lh ${{ github.workspace }}/summaries/
         shell: bash
 
