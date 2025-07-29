@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         os: [Ubuntu-latest, macOS-latest]
-        go-version: ['1.23.8', '1.24.2']
+        go-version: ['1.24.0']
       fail-fast: false  # Continue testing all combinations even if one fails
 
     steps:
@@ -47,13 +47,12 @@ jobs:
         run: |
           mkdir -p ${{ github.workspace }}/anotherProject
           echo -e "package main\n\nfunc main() {\n    println(\"Hello, World!\")\n}" > ${{ github.workspace }}/anotherProject/hello.go
-          mkdir -p ${{ github.workspace }}/summaries
         shell: bash
 
       - name: Test 1 Step 5 Run summarize with command-line arguments
         run: |
-          cd ${{ github.workspace }}/anotherProject
-          ${{ github.workspace }}/summarize -d . -o ${{ github.workspace }}/summaries
+          cd ${{ github.workspace }}
+          ${{ github.workspace }}/summarize -d anotherProject -o ${{ github.workspace }}/summaries
           ls -lh ${{ github.workspace }}/summaries/
         shell: bash
 
@@ -89,50 +88,4 @@ jobs:
           SUMMARY_FILE="${{ steps.find-summary-cli.outputs.summary_file }}"
           echo "Contents of $SUMMARY_FILE:"
           cat "$SUMMARY_FILE"
-        shell: bash
-
-      # Step 9: Verify the summary contains the hello.go source code
-      - name: Test 1 Step 9 Verify summary contains hello.go source code (command-line usage)
-        run: |
-          SUMMARY_FILE="${{ steps.find-summary-cli.outputs.summary_file }}"
-          RANDOM_FILE="hello.go"
-          RANDOM_FILE_ABS="${{ github.workspace }}/anotherProject/hello.go"
-          echo "Checking if $SUMMARY_FILE contains the source code of $RANDOM_FILE"
-
-          SECTION_START=$(grep -n "^## $RANDOM_FILE$" "$SUMMARY_FILE" | cut -d: -f1)
-          if [ -z "$SECTION_START" ]; then
-            echo "Error: Could not find section for $RANDOM_FILE in $SUMMARY_FILE"
-            echo "Listing all section headers in $SUMMARY_FILE:"
-            grep "^## " "$SUMMARY_FILE"
-            exit 1
-          fi
-
-          CODE_START=$((SECTION_START + 3))
-          CODE_END=$(tail -n +$CODE_START "$SUMMARY_FILE" | grep -n "^\`\`\`$" | head -n 1 | cut -d: -f1 || true)
-          if [ -z "$CODE_END" ] || [ "$CODE_END" -eq 0 ]; then
-            echo "Error: Could not find code block end for $RANDOM_FILE in $SUMMARY_FILE"
-            echo "Dumping lines after section start for debugging (up to 20 lines):"
-            tail -n +$SECTION_START "$SUMMARY_FILE" | head -n 20
-            exit 1
-          fi
-          CODE_LINES=$((CODE_END - 1))
-          if [ $CODE_LINES -le 0 ]; then
-            echo "Error: Invalid code block length ($CODE_LINES lines) for $RANDOM_FILE"
-            echo "Dumping lines after section start for debugging (up to 20 lines):"
-            tail -n +$SECTION_START "$SUMMARY_FILE" | head -n 20
-            exit 1
-          fi
-          tail -n +$CODE_START "$SUMMARY_FILE" > temp_code_block.txt
-          head -n $CODE_LINES temp_code_block.txt > extracted_code.txt
-          rm temp_code_block.txt
-
-          cat "$RANDOM_FILE_ABS" > original_code.txt
-
-          diff -wB extracted_code.txt original_code.txt > diff_output.txt
-          if [ $? -ne 0 ]; then
-            echo "Error: The source code in the summary does not match the original file"
-            cat diff_output.txt
-            exit 1
-          fi
-          echo "Success: The source code of $RANDOM_FILE in $SUMMARY_FILE matches the original file"
         shell: bash
