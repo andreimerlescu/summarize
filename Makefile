@@ -21,7 +21,7 @@ summary:
 	@if ! command -v summarize > /dev/null; then \
 		go install github.com/andreimerlescu/summarize@latest; \
 	fi
-	@summarize -i "go,Makefile,mod" -debug=true
+	@summarize -i "go,Makefile,mod" -debug -print
 
 install: $(BIN_DIR)
 	@if [[ "$(shell go env GOOS)" == "windows" ]]; then \

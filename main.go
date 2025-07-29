@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -10,8 +12,10 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	check "github.com/andreimerlescu/checkfs"
@@ -38,27 +42,40 @@ func Version() string {
 }
 
 const (
-	projectName          string = "github.com/andreimerlescu/summarize"
-	tFormat              string = "2006.01.02.15.04.05.UTC"
+	projectName string = "github.com/andreimerlescu/summarize"
+	tFormat     string = "2006.01.02.15.04.05.UTC"
+
 	eConfigFile          string = "SUMMARIZE_CONFIG_FILE"
 	eAddIgnoreInPathList string = "SUMMARIZE_IGNORE_CONTAINS"
 	eAddIncludeExtList   string = "SUMMARIZE_INCLUDE_EXT"
 	eAddExcludeExtList   string = "SUMMARIZE_EXCLUDE_EXT"
-	kSourceDir           string = "d"
-	kOutputDir           string = "o"
-	kIncludeExt          string = "i"
-	kExcludeExt          string = "x"
-	kSkipContains        string = "s"
-	kFilename            string = "f"
-	kVersion             string = "v"
-	kDotFiles            string = "ndf"
-	kMaxFiles            string = "mf"
-	kDebug               string = "debug"
+	eAlwaysWrite         string = "SUMMARIZE_ALWAYS_WRITE"
+	eAlwaysPrint         string = "SUMMARIZE_ALWAYS_PRINT"
+	eAlwaysJson          string = "SUMMARIZE_ALWAYS_JSON"
+	eAlwaysCompress      string = "SUMMARIZE_ALWAYS_COMPRESS"
+
+	kSourceDir     string = "d"
+	kOutputDir     string = "o"
+	kIncludeExt    string = "i"
+	kExcludeExt    string = "x"
+	kSkipContains  string = "s"
+	kFilename      string = "f"
+	kPrint         string = "print"
+	kMaxOutputSize string = "max"
+	kWrite         string = "write"
+	kVersion       string = "v"
+	kDotFiles      string = "ndf"
+	kMaxFiles      string = "mf"
+	kDebug         string = "debug"
+	kJson          string = "json"
+	kCompress      string = "gz"
 )
 
 var (
 	// figs is a figtree of fruit for configurable command line arguments that bear fruit
 	figs figtree.Plant
+
+	alwaysWrite = true
 
 	// defaultExclude are the -exc list of extensions that will be skipped automatically
 	defaultExclude = []string{
@@ -147,30 +164,42 @@ func configure() {
 	figs = figtree.With(figtree.Options{
 		Harvest:           9,
 		IgnoreEnvironment: true,
-		ConfigFile:        os.Getenv(eConfigFile),
+		ConfigFile:        envVal(eConfigFile, "./config.yaml"),
 	})
 	// properties
-	figs.NewString(kSourceDir, ".", "Absolute path of directory you want to summarize.")
-	figs.NewString(kOutputDir, filepath.Join(".", "summaries"), fmt.Sprintf("Path of the directory to write the %s file to", newSummaryFilename()))
-	figs.NewString(kFilename, newSummaryFilename(), "Output file of summary.md")
-	figs.NewList(kIncludeExt, defaultInclude, "List of extensions to INCLUDE in summary.")
-	figs.NewList(kExcludeExt, defaultExclude, "List of extensions to EXCLUDE in summary.")
-	figs.NewList(kSkipContains, defaultAvoid, "List of path substrings if present to skip over full path.")
-	figs.NewInt(kMaxFiles, 20, "Maximum number of files to process concurrently")
-	figs.NewBool(kDotFiles, false, "Any path that is considered a dotfile can be included by setting this to true")
-	figs.NewBool(kVersion, false, "Display current version of summarize")
-	figs.NewBool(kDebug, false, "Enable debug mode")
+	figs = figs.NewString(kSourceDir, ".", "Absolute path of directory you want to summarize.")
+	figs = figs.NewString(kOutputDir, filepath.Join(".", "summaries"), fmt.Sprintf("Path of the directory to write the %s file to", newSummaryFilename()))
+	figs = figs.NewString(kFilename, newSummaryFilename(), "Output file of summary.md")
+	figs = figs.NewList(kIncludeExt, defaultInclude, "List of extensions to INCLUDE in summary.")
+	figs = figs.NewList(kExcludeExt, defaultExclude, "List of extensions to EXCLUDE in summary.")
+	figs = figs.NewList(kSkipContains, defaultAvoid, "List of path substrings if present to skip over full path.")
+	figs = figs.NewInt(kMaxFiles, 369, "Maximum number of files to process concurrently")
+	figs = figs.NewInt64(kMaxOutputSize, 1_776_369, "Maximum file size of output file")
+	figs = figs.NewBool(kDotFiles, false, "Any path that is considered a dotfile can be included by setting this to true")
+	figs = figs.NewBool(kPrint, envIs(eAlwaysPrint), "Print generated file contents to STDOUT")
+	figs = figs.NewBool(kWrite, envIs(eAlwaysWrite), "Write generated contents to file")
+	figs = figs.NewBool(kJson, envIs(eAlwaysJson), "Enable JSON formatting")
+	figs = figs.NewBool(kCompress, envIs(eAlwaysCompress), "Use gzip compression in output")
+	figs = figs.NewBool(kVersion, false, "Display current version of summarize")
+	figs = figs.NewBool(kDebug, false, "Enable debug mode")
 	// validators
-	figs.WithValidator(kSourceDir, figtree.AssureStringNotEmpty)
-	figs.WithValidator(kOutputDir, figtree.AssureStringNotEmpty)
-	figs.WithValidator(kFilename, figtree.AssureStringNotEmpty)
-	figs.WithValidator(kMaxFiles, figtree.AssureIntInRange(1, 63339))
+	figs = figs.WithValidator(kSourceDir, figtree.AssureStringNotEmpty)
+	figs = figs.WithValidator(kOutputDir, figtree.AssureStringNotEmpty)
+	figs = figs.WithValidator(kFilename, figtree.AssureStringNotEmpty)
+	figs = figs.WithValidator(kMaxFiles, figtree.AssureIntInRange(1, 17_369))
+	figs = figs.WithValidator(kMaxOutputSize, figtree.AssureInt64InRange(369, 369_369_369_369))
 	// callbacks
-	figs.WithCallback(kSourceDir, figtree.CallbackAfterVerify, callbackVerifyReadableDirectory)
-	figs.WithCallback(kFilename, figtree.CallbackAfterVerify, callbackVerifyFile)
+	figs = figs.WithCallback(kSourceDir, figtree.CallbackAfterVerify, callbackVerifyReadableDirectory)
+	figs = figs.WithCallback(kFilename, figtree.CallbackAfterVerify, callbackVerifyFile)
 }
 
 type result struct {
+	Path     string `yaml:"path" json:"path"`
+	Contents []byte `yaml:"contents" json:"contents"`
+	Size     int64  `yaml:"size" json:"size"`
+}
+
+type final struct {
 	Path     string `yaml:"path" json:"path"`
 	Contents string `yaml:"contents" json:"contents"`
 	Size     int64  `yaml:"size" json:"size"`
@@ -249,6 +278,13 @@ func main() {
 				a := strings.Contains(filename, avoidThis) || strings.Contains(path, avoidThis)
 				b := strings.HasPrefix(filename, avoidThis) || strings.HasPrefix(path, avoidThis)
 				c := strings.HasSuffix(filename, avoidThis) || strings.HasSuffix(path, avoidThis)
+				if a || b || c {
+					if isDebug {
+						fmt.Printf("ignoring %s in %s\n", filename, path)
+					}
+					return nil // skip without error
+				}
+
 				parts, err := filepath.Glob(path)
 				if err != nil {
 					errs = append(errs, err)
@@ -266,12 +302,7 @@ func main() {
 						return nil
 					}
 				}
-				if a || b || c {
-					if isDebug {
-						fmt.Printf("ignoring %s in %s\n", filename, path)
-					}
-					return nil // skip without error
-				}
+
 			}
 
 			// get the extension
@@ -337,13 +368,14 @@ func main() {
 	}
 
 	maxFileSemaphore := sema.New(*figs.Int(kMaxFiles))
-	writeChan := make(chan []byte, 10240)
+	resultsChan := make(chan result, *figs.Int(kMaxFiles))
 	writerWG := sync.WaitGroup{}
 	writerWG.Add(1)
 	go func() {
 		defer writerWG.Done()
 
 		// Create output file
+		srcDir := *figs.String(kSourceDir)
 		outputFileName := filepath.Join(*figs.String(kOutputDir), *figs.String(kFilename))
 		var buf bytes.Buffer
 		buf.WriteString("# Project Summary - " + filepath.Base(*figs.String(kFilename)) + "\n")
@@ -357,13 +389,71 @@ func main() {
 		buf.WriteString("specific components while retaining all existing functionality and maintaining comments ")
 		buf.WriteString("within the code.  \n\n")
 		buf.WriteString("### Workspace\n\n")
-		buf.WriteString("<pr>" + *figs.String(kSourceDir) + "</pre>\n\n\n")
-
-		for receivedData := range writeChan {
-			buf.Write(receivedData)
+		abs, err := filepath.Abs(srcDir)
+		if err == nil {
+			buf.WriteString("<pr>" + abs + "</pre>\n\n")
+		} else {
+			buf.WriteString("<pr>" + srcDir + "</pre>\n\n")
 		}
 
-		capture("saving output file during write", os.WriteFile(outputFileName, buf.Bytes(), 0644))
+		renderMu := &sync.Mutex{}
+		renderedPaths := make(map[string]int64)
+		totalSize := int64(buf.Len())
+		for in := range resultsChan {
+			if _, exists := renderedPaths[in.Path]; exists {
+				continue
+			}
+			runningSize := atomic.AddInt64(&totalSize, in.Size)
+			if runningSize >= *figs.Int64(kMaxOutputSize) {
+				continue
+			}
+			renderMu.Lock()
+			renderedPaths[in.Path] = in.Size
+			buf.Write(in.Contents)
+			renderMu.Unlock()
+		}
+
+		shouldPrint := *figs.Bool(kPrint)
+		canWrite := *figs.Bool(kWrite)
+		showJson := *figs.Bool(kJson)
+		wrote := false
+
+		if *figs.Bool(kCompress) {
+			compressed, err := compress(bytes.Clone(buf.Bytes()))
+			capture("compressing bytes buffer", err)
+			buf.Reset()
+			buf.Write(compressed)
+			outputFileName += ".gz"
+		}
+
+		if !shouldPrint && !canWrite {
+			capture("saving output file during write", os.WriteFile(outputFileName, buf.Bytes(), 0644))
+			wrote = true
+		}
+
+		if canWrite && !wrote {
+			capture("saving output file during write", os.WriteFile(outputFileName, buf.Bytes(), 0644))
+			wrote = true
+		}
+
+		if shouldPrint {
+			if showJson {
+				r := final{
+					Path:     outputFileName,
+					Size:     int64(buf.Len()),
+					Contents: buf.String(),
+				}
+				jb, err := json.MarshalIndent(r, "", "  ")
+				if err != nil {
+					_, _ = fmt.Fprintln(os.Stderr, err)
+				}
+				fmt.Println(string(jb))
+			} else {
+				fmt.Println(buf.String())
+			}
+			os.Exit(0)
+		}
+
 	}()
 
 	var toUpdate []mapData
@@ -387,6 +477,8 @@ func main() {
 			defer throttler.Release() // when we're done, release the throttler
 			defer wg.Done()           // then tell the sync.WaitGroup that we are done
 
+			paths = simplify(paths)
+
 			innerData.Paths = paths
 			*toUpdate = append(*toUpdate, *innerData)
 
@@ -407,9 +499,35 @@ func main() {
 						strings.HasSuffix(filePath, "aarch64") {
 						return
 					}
-					var sb bytes.Buffer                                            // capture what we write to file in a bytes buffer
-					sb.WriteString(fmt.Sprintf("## %s\n\n```%s\n", filePath, ext)) // write the header of the summary for the file
-					content, err := os.ReadFile(filePath)                          // open the file and get its contents
+					type tFileInfo struct {
+						Name string      `json:"name"`
+						Size int64       `json:"size"`
+						Mode os.FileMode `json:"mode"`
+					}
+					info, err := os.Stat(filePath)
+					if err != nil {
+						errs = append(errs, err)
+						return
+					}
+					fileInfo := &tFileInfo{
+						Name: filepath.Base(filePath),
+						Size: info.Size(),
+						Mode: info.Mode(),
+					}
+					infoJson, err := json.MarshalIndent(fileInfo, "", "  ")
+					if err != nil {
+						errs = append(errs, err)
+						return
+					}
+					var sb bytes.Buffer // capture what we write to file in a bytes buffer
+					sb.WriteString("## " + filepath.Base(filePath) + "\n\n")
+					sb.WriteString("The `os.Stat` for the " + filePath + " is: \n\n")
+					sb.WriteString("```json\n")
+					sb.WriteString(string(infoJson) + "\n")
+					sb.WriteString("```\n\n")
+					sb.WriteString("Source Code:\n\n")
+					sb.WriteString("```" + ext + "\n")
+					content, err := os.ReadFile(filePath) // open the file and get its contents
 					if err != nil {
 						errs = append(errs, fmt.Errorf("Error reading file %s: %v\n", filePath, err))
 						return
@@ -418,10 +536,14 @@ func main() {
 						errs = append(errs, fmt.Errorf("Error writing file %s: %v\n", filePath, err))
 						return
 					}
-					content = []byte{}        // clear memory after its written
-					sb.WriteString("\n```\n") // close out the file footer
+					content = []byte{}          // clear memory after its written
+					sb.WriteString("\n```\n\n") // close out the file footer
 					seen.Add(filePath)
-					writeChan <- sb.Bytes()
+					resultsChan <- result{
+						Path:     filePath,
+						Contents: sb.Bytes(),
+						Size:     int64(sb.Len()),
+					}
 				}(ext, filePath)
 			}
 
@@ -435,16 +557,31 @@ func main() {
 		data.Store(innerData.Ext, innerData)
 	}
 
-	close(writeChan) // Signal the writer goroutine to finish
-	writerWG.Wait()  // Wait for the writer to flush and close the file
+	close(resultsChan) // Signal the writer goroutine to finish
+	writerWG.Wait()    // Wait for the writer to flush and close the file
 
 	if len(errs) > 0 {
 		terminate(os.Stderr, "Error writing to output file: %v\n", errs)
 	}
 
 	// Print completion message
-	fmt.Printf("Summary generated: %s\n",
-		filepath.Join(*figs.String(kOutputDir), *figs.String(kFilename)))
+	if *figs.Bool(kJson) {
+		r := m{
+			Message: fmt.Sprintf("Summary generated: %s\n",
+				filepath.Join(*figs.String(kOutputDir), *figs.String(kFilename)),
+			),
+		}
+		jb, err := json.MarshalIndent(r, "", "  ")
+		if err != nil {
+			terminate(os.Stderr, "Error marshalling results: %v\n", err)
+		} else {
+			fmt.Println(string(jb))
+		}
+	} else {
+		fmt.Printf("Summary generated: %s\n",
+			filepath.Join(*figs.String(kOutputDir), *figs.String(kFilename)),
+		)
+	}
 }
 
 var callbackVerifyFile = func(value interface{}) error {
@@ -472,10 +609,27 @@ var capture = func(msg string, d ...error) {
 	if len(d) == 0 || (len(d) == 1 && d[0] == nil) {
 		return
 	}
-	terminate(os.Stderr, "%s\n\ncaptured error: %v\n", msg, d)
+	terminate(os.Stderr, "[EXCUSE ME, BUT] %s\n\ncaptured error: %v\n", msg, d)
+}
+
+type m struct {
+	Message string `json:"message"`
 }
 
 var terminate = func(d io.Writer, i string, e ...interface{}) {
+	for _, f := range os.Args {
+		if strings.HasPrefix(f, "-json") {
+			mm := m{Message: fmt.Sprintf(i, e...)}
+			jb, err := json.MarshalIndent(mm, "", "  ")
+			if err != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "Error serializing json: %v\n", err)
+				_, _ = fmt.Fprintf(d, i, e...)
+			} else {
+				fmt.Println(string(jb))
+			}
+			os.Exit(1)
+		}
+	}
 	_, _ = fmt.Fprintf(d, i, e...)
 	os.Exit(1)
 }
@@ -549,4 +703,56 @@ func (s *seenStrings) Exists(entry string) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.m[entry]
+}
+
+func envVal(name, fallback string) string {
+	v, ok := os.LookupEnv(name)
+	if !ok {
+		return fallback
+	}
+	return v
+}
+
+func envIs(name string) bool {
+	v, ok := os.LookupEnv(name)
+	if !ok {
+		return false
+	}
+	vb, err := strconv.ParseBool(v)
+	if err != nil {
+		return false
+	}
+	return vb
+}
+
+// compress compresses a string using gzip and returns the compressed bytes
+func compress(s []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	gzWriter := gzip.NewWriter(&buf)
+	_, err := gzWriter.Write(s)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write to gzip writer: %w", err)
+	}
+	err = gzWriter.Close()
+	if err != nil {
+		return nil, fmt.Errorf("failed to close gzip writer: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
+// decompress decompresses gzip compressed bytes back to a string
+func decompress(compressed []byte) (string, error) {
+	buf := bytes.NewReader(compressed)
+	gzReader, err := gzip.NewReader(buf)
+	if err != nil {
+		return "", fmt.Errorf("failed to create gzip reader: %w", err)
+	}
+	defer func() {
+		_ = gzReader.Close()
+	}()
+	decompressed, err := io.ReadAll(gzReader)
+	if err != nil {
+		return "", fmt.Errorf("failed to read from gzip reader: %w", err)
+	}
+	return string(decompressed), nil
 }
