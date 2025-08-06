@@ -8,8 +8,17 @@ var (
 	// figs is a figtree of fruit for configurable command line arguments that bear fruit
 	figs figtree.Plant
 
-	// defaultExclude are the -exc list of extensions that will be skipped automatically
+	aiPtr *agent
+
+	safeWords = []string{
+		"stop", "quit", "exit", "done",
+	}
+
 	defaultExclude = []string{
+		"useExpanded",
+	}
+	// defaultExclude are the -exc list of extensions that will be skipped automatically
+	extendedDefaultExclude = []string{
 		// Compressed archives
 		"7z", "gz", "xz", "zst", "zstd", "bz", "bz2", "bzip2", "zip", "tar", "rar", "lz4", "lzma", "cab", "arj",
 
@@ -75,11 +84,19 @@ var (
 
 	// defaultInclude are the -inc list of extensions that will be included in the summary
 	defaultInclude = []string{
+		"useExpanded",
+	}
+
+	extendedDefaultInclude = []string{
 		"go", "ts", "tf", "sh", "py", "js", "Makefile", "mod", "Dockerfile", "dockerignore", "gitignore", "esconfigs", "md",
 	}
 
-	// defaultAvoid are the -avoid list of substrings in file path names to avoid in the summary
 	defaultAvoid = []string{
+		"useExpanded",
+	}
+
+	// extendedDefaultAvoid are the -avoid list of substrings in file path names to avoid in the summary
+	extendedDefaultAvoid = []string{
 		".min.js", ".min.css", ".git/", ".svn/", ".vscode/", ".vs/", ".idea/", "logs/", "secrets/",
 		".venv/", "/site-packages", ".terraform/", "summaries/", "node_modules/", "/tmp", "tmp/", "logs/",
 	}

@@ -28,6 +28,33 @@ const (
 	// eAlwaysCompress ENV string-as-bool (as "TRUE" or "true" for true) always sets -gz true in CLI argument parsing
 	eAlwaysCompress string = "SUMMARIZE_ALWAYS_COMPRESS"
 
+	eDisableAi        string = "SUMMARIZE_DISABLE_AI"
+	eAiProvider       string = "SUMMARIZE_AI_PROVIDER"
+	eAiModel          string = "SUMMARIZE_AI_MODEL"
+	eAiApiKey         string = "SUMMARIZE_AI_API_KEY"
+	eAiMaxTokens      string = "SUMMARIZE_AI_MAX_TOKENS"
+	eAiSeed           string = "SUMMARIZE_AI_SEED"
+	eAiAlwaysAsk      string = "SUMMARIZE_AI_ALWAYS_ASK"
+	eAiAlwaysFollowUp string = "SUMMARIZE_AI_ALWAYS_FOLLOWUP"
+
+	dAiSeed           int    = -1
+	dAiMaxTokens      int    = 3000
+	dAiProvider       string = "ollama"
+	dAiModel          string = "mistral-small3.2:24b"
+	dAiAlwaysAsk      bool   = false
+	dAiAlwaysFollowUp bool   = false
+
+	kAiEnabled        string = "ai"
+	kAiProvider       string = "provider"
+	kAiModel          string = "model"
+	kAiApiKey         string = "api-key"
+	kAiMaxTokens      string = "max-tokens"
+	kAiSeed           string = "seed"
+	kAiAlwaysAsk      string = "ask"
+	kAiAlwaysFollowUp string = "followup"
+
+	kShowExpanded string = "expand"
+
 	// kSourceDir figtree fig string -d for the directory path to generate a summary of
 	kSourceDir string = "d"
 

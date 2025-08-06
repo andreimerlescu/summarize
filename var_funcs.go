@@ -55,7 +55,7 @@ var capture = func(msg string, d ...error) {
 var terminate = func(d io.Writer, i string, e ...interface{}) {
 	for _, f := range os.Args {
 		if strings.HasPrefix(f, "-json") {
-			mm := m{Message: fmt.Sprintf(i, e...)}
+			mm := M{Message: fmt.Sprintf(i, e...)}
 			jb, err := json.MarshalIndent(mm, "", "  ")
 			if err != nil {
 				_, _ = fmt.Fprintf(os.Stderr, "Error serializing json: %v\n", err)

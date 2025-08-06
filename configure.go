@@ -32,6 +32,17 @@ func configure() {
 	figs = figs.NewBool(kCompress, envIs(eAlwaysCompress), "Use gzip compression in output")
 	figs = figs.NewBool(kVersion, false, "Display current version of summarize")
 	figs = figs.NewBool(kDebug, false, "Enable debug mode")
+	figs = figs.NewBool(kShowExpanded, false, "Show expand menu")
+
+	// ai mode
+	figs = figs.NewBool(kAiEnabled, envIs(eDisableAi) == false, "Enable AI Features")
+	figs = figs.NewString(kAiProvider, envVal(eAiProvider, dAiProvider), "AI Provider to use. (eg. ollama, openai, claude)")
+	figs = figs.NewString(kAiModel, envVal(eAiModel, dAiModel), "AI Model to use for query")
+	figs = figs.NewInt(kAiMaxTokens, envInt(eAiMaxTokens, dAiMaxTokens), "AI Max Tokens to use for query")
+	figs = figs.NewInt(kAiSeed, envInt(eAiSeed, dAiSeed), "AI Seed to use for query")
+	figs = figs.NewString(kAiApiKey, envVal(eAiApiKey, ""), "AI API Key to use for query (leave empty for ollama)")
+	figs = figs.NewBool(kAiAlwaysAsk, envIs(eAiAlwaysAsk), "AI Always ask a question about the summary file you're summarizing and include the response in the output")
+	figs = figs.NewBool(kAiAlwaysFollowUp, envIs(eAiAlwaysFollowUp), "Look until Ctrl+C by asking additional prompts for the chat conversation with the AI about the summary")
 
 	// validators run internal figtree Assure<Mutagensis><Rule> funcs as arguments to validate against
 	figs = figs.WithValidator(kSourceDir, figtree.AssureStringNotEmpty)
@@ -39,6 +50,8 @@ func configure() {
 	figs = figs.WithValidator(kFilename, figtree.AssureStringNotEmpty)
 	figs = figs.WithValidator(kMaxFiles, figtree.AssureIntInRange(1, 17_369))
 	figs = figs.WithValidator(kMaxOutputSize, figtree.AssureInt64InRange(369, 369_369_369_369))
+	figs = figs.WithValidator(kAiSeed, figtree.AssureIntInRange(-1, 369_369_369_369))
+	figs = figs.WithValidator(kAiMaxTokens, figtree.AssureIntInRange(-1, 369_369_369_369))
 
 	// callbacks as figtree.CallbackAfterVerify run after the Validators above finish
 	figs = figs.WithCallback(kSourceDir, figtree.CallbackAfterVerify, callbackVerifyReadableDirectory)

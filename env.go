@@ -28,6 +28,19 @@ func envIs(name string) bool {
 	return vb
 }
 
+// envInt takes a name for os.Lookup with a fallback value to return an int
+func envInt(name string, fallback int) int {
+	v, ok := os.LookupEnv(name)
+	if !ok {
+		return fallback
+	}
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return fallback
+	}
+	return i
+}
+
 // addFromEnv takes a pointer to a slice of strings and a new ENV os.LookupEnv name to return the figtree ToList on the Flesh that sends the list into simplify before being returned
 func addFromEnv(e string, l *[]string) {
 	v, ok := os.LookupEnv(e)

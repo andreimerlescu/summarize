@@ -21,6 +21,25 @@ import (
 func main() {
 	configure()
 	capture("figs loading environment", figs.Load())
+	inc := *figs.List(kIncludeExt)
+	if len(inc) == 1 && inc[0] == "useExpanded" {
+		figs.StoreList(kIncludeExt, extendedDefaultInclude)
+	}
+	exc := *figs.List(kExcludeExt)
+	if len(exc) == 1 && exc[0] == "useExpanded" {
+		figs.StoreList(kExcludeExt, extendedDefaultExclude)
+	}
+	ski := *figs.List(kSkipContains)
+	if len(ski) == 1 && ski[0] == "useExpanded" {
+		figs.StoreList(kSkipContains, extendedDefaultAvoid)
+	}
+	if *figs.Bool(kShowExpanded) {
+		fmt.Println("Expanded:")
+		fmt.Printf("-%s=%s\n", kIncludeExt, strings.Join(*figs.List(kIncludeExt), ","))
+		fmt.Printf("-%s=%s\n", kExcludeExt, strings.Join(*figs.List(kExcludeExt), ","))
+		fmt.Printf("-%s=%s\n", kSkipContains, strings.Join(*figs.List(kSkipContains), ","))
+		os.Exit(0)
+	}
 	isDebug := *figs.Bool(kDebug)
 	if *figs.Bool(kVersion) {
 		fmt.Println(Version())
@@ -181,7 +200,7 @@ func main() {
 	}
 
 	maxFileSemaphore := sema.New(*figs.Int(kMaxFiles))
-	resultsChan := make(chan result, *figs.Int(kMaxFiles))
+	resultsChan := make(chan Result, *figs.Int(kMaxFiles))
 	writerWG := sync.WaitGroup{}
 	writerWG.Add(1)
 	go func() {
@@ -201,12 +220,18 @@ func main() {
 		buf.WriteString("length, then print the entire contents in your response with your updates to the ")
 		buf.WriteString("specific components while retaining all existing functionality and maintaining comments ")
 		buf.WriteString("within the code.  \n\n")
+		if *figs.Bool(kAiEnabled) {
+			buf.WriteString("## AI \n\n")
+			buf.WriteString("The AI interacted with was: _REPLACE_ME_PROVIDER_ \n\n")
+			buf.WriteString("### Response \n\n")
+			buf.WriteString("_REPLACE_ME_QUESTION_ \n\n_REPLACE_ME_ANSWER_ \n\n")
+		}
 		buf.WriteString("### Workspace\n\n")
 		abs, err := filepath.Abs(srcDir)
 		if err == nil {
-			buf.WriteString("<pr>" + abs + "</pre>\n\n")
+			buf.WriteString("`" + abs + "`\n\n")
 		} else {
-			buf.WriteString("<pr>" + srcDir + "</pre>\n\n")
+			buf.WriteString("`" + srcDir + "`\n\n")
 		}
 
 		renderMu := &sync.Mutex{}
@@ -224,6 +249,84 @@ func main() {
 			renderedPaths[in.Path] = in.Size
 			buf.Write(in.Contents)
 			renderMu.Unlock()
+		}
+		isFinished := false
+	finished:
+		var response *Response
+		if !isFinished && CanAI(kAiAlwaysAsk) {
+			first := "We've summarized your workspace. What question would you like to ask the AI Agent?"
+		retry:
+			// question prompts the terminal for input text that acts as the question to the LLM with the summary as context
+			question := StringPrompt(first)
+			if IsSafeWord(question) {
+				isFinished = true
+				goto finished
+			}
+
+			// copy the buf to output
+			output := buf.String()
+
+			// replace the question
+			output = strings.ReplaceAll(output, "_REPLACE_ME_QUESTION_", question)
+
+			// remove answer placeholder
+			output = strings.ReplaceAll(output, "_REPLACE_ME_ANSWER_ \n\n", "")
+
+			// build new string
+			request := strings.Builder{}
+			// initial part of the prompt
+			request.WriteString("Agent, the Officer has requested the following question related to this project summary:\n\n")
+			// the text from the captured terminal session
+			request.WriteString(question)
+
+			// PERFORM AI REQUEST
+			// reset output since data we need is inside of request
+			output = buf.String()
+			// replace the question placeholder with the actual question the user entered
+			output = strings.ReplaceAll(output, "_REPLACE_ME_QUESTION_", "Your question was: "+question)
+			// response uses the Agent() to Ask() the request using the output as the context
+			response, err = Agent().Ask(output, request.String())
+			// WAIT FOR RESPONSE
+			output = strings.ReplaceAll(output, "_REPLACE_ME_ANSWER_", response.Response)
+			output = strings.ReplaceAll(output, "_REPLACE_ME_PROVIDER_", *figs.String(kAiProvider))
+			buf.Reset()
+			buf.WriteString(output)
+			if CanAI(kAiAlwaysFollowUp) {
+				width := TermWidth()
+				inside := "--- ] AI RESPONSE [ ---"
+				var margin int = (width - len(inside)) / 2
+				left := strings.Repeat(" ", int(margin))
+				right := strings.Repeat(" ", int(margin))
+				fmt.Printf("%s%s%s\n", left, inside, right)
+				fmt.Println(strings.Repeat("-", width))
+				fmt.Println(response.Response)
+				fmt.Println("")
+				first = "Reply with '" + strings.Join(safeWords, ", ") + "' to end the conversation and include log in summary without exiting early because -followup is used!"
+				inside = "=== [ FOLLOWUP REQUEST ] ==="
+				left = strings.Repeat(" ", int(margin))
+				right = strings.Repeat(" ", int(margin))
+				fmt.Printf("%s%s%s\n", left, inside, right)
+				fmt.Println(strings.Repeat("-", width))
+				goto retry
+			}
+			if *figs.Bool(kJson) {
+				m := M{
+					Message: response.Response,
+				}
+				b, err := json.MarshalIndent(m, "", "  ")
+				if err != nil {
+					_, _ = fmt.Fprintln(os.Stderr, err)
+				}
+				fmt.Println(string(b))
+				os.Exit(1)
+			}
+			if *figs.Bool(kPrint) {
+				fmt.Println(response.Response)
+				os.Exit(0)
+			}
+		}
+		if isFinished {
+
 		}
 
 		shouldPrint := *figs.Bool(kPrint)
@@ -251,7 +354,7 @@ func main() {
 
 		if shouldPrint {
 			if showJson {
-				r := final{
+				r := Final{
 					Path:     outputFileName,
 					Size:     int64(buf.Len()),
 					Contents: buf.String(),
@@ -352,7 +455,7 @@ func main() {
 					content = []byte{}          // clear memory after its written
 					sb.WriteString("\n```\n\n") // close out the file footer
 					seen.Add(filePath)
-					resultsChan <- result{
+					resultsChan <- Result{
 						Path:     filePath,
 						Contents: sb.Bytes(),
 						Size:     int64(sb.Len()),
@@ -379,7 +482,7 @@ func main() {
 
 	// Print completion message
 	if *figs.Bool(kJson) {
-		r := m{
+		r := M{
 			Message: fmt.Sprintf("Summary generated: %s\n",
 				filepath.Join(*figs.String(kOutputDir), *figs.String(kFilename)),
 			),
