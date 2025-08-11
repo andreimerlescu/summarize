@@ -2,27 +2,9 @@ package main
 
 import (
 	"sync"
-
-	"github.com/teilomillet/gollm"
 )
 
 type (
-	AI interface {
-		Ask(context string, question ...string) (*Response, error)
-	}
-	// agent represents a new ai llm interface
-	agent struct {
-		llm gollm.LLM
-	}
-
-	Response struct {
-		agent      AI
-		prompt     *gollm.Prompt
-		Request    string   `json:"request"`
-		Directives []string `json:"directives"`
-		Context    string   `json:"context"`
-		Response   string   `json:"response"`
-	}
 
 	// Result contains the scanned path in the kSourceDir that matched the conditions and shall be included in the Final summary of kFilename
 	Result struct {

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/andreimerlescu/figtree/v2"
+	"github.com/andreimerlescu/goenv/env"
 )
 
 // init creates a new figtree with options to use CONFIG_FILE as a way of reading a YAML file while ignoring the env
@@ -13,7 +14,7 @@ func configure() {
 	figs = figtree.With(figtree.Options{
 		Harvest:           9,
 		IgnoreEnvironment: true,
-		ConfigFile:        envVal(eConfigFile, "./config.yaml"),
+		ConfigFile:        env.String(eConfigFile, "./config.yaml"),
 	})
 
 	// properties define new fig fruits on the figtree
@@ -26,23 +27,22 @@ func configure() {
 	figs = figs.NewInt(kMaxFiles, 369, "Maximum number of files to process concurrently")
 	figs = figs.NewInt64(kMaxOutputSize, 1_776_369, "Maximum file size of output file")
 	figs = figs.NewBool(kDotFiles, false, "Any path that is considered a dotfile can be included by setting this to true")
-	figs = figs.NewBool(kPrint, envIs(eAlwaysPrint), "Print generated file contents to STDOUT")
-	figs = figs.NewBool(kWrite, envIs(eAlwaysWrite), "Write generated contents to file")
-	figs = figs.NewBool(kJson, envIs(eAlwaysJson), "Enable JSON formatting")
-	figs = figs.NewBool(kCompress, envIs(eAlwaysCompress), "Use gzip compression in output")
+	figs = figs.NewBool(kPrint, env.Bool(eAlwaysPrint, false), "Print generated file contents to STDOUT")
+	figs = figs.NewBool(kWrite, env.Bool(eAlwaysWrite, false), "Write generated contents to file")
+	figs = figs.NewBool(kJson, env.Bool(eAlwaysJson, false), "Enable JSON formatting")
+	figs = figs.NewBool(kCompress, env.Bool(eAlwaysCompress, false), "Use gzip compression in output")
 	figs = figs.NewBool(kVersion, false, "Display current version of summarize")
 	figs = figs.NewBool(kDebug, false, "Enable debug mode")
 	figs = figs.NewBool(kShowExpanded, false, "Show expand menu")
+	figs = figs.NewBool(kChat, false, "AI chat session with transcript based on new summary information in summary after")
 
 	// ai mode
-	figs = figs.NewBool(kAiEnabled, envIs(eDisableAi) == false, "Enable AI Features")
-	figs = figs.NewString(kAiProvider, envVal(eAiProvider, dAiProvider), "AI Provider to use. (eg. ollama, openai, claude)")
-	figs = figs.NewString(kAiModel, envVal(eAiModel, dAiModel), "AI Model to use for query")
-	figs = figs.NewInt(kAiMaxTokens, envInt(eAiMaxTokens, dAiMaxTokens), "AI Max Tokens to use for query")
-	figs = figs.NewInt(kAiSeed, envInt(eAiSeed, dAiSeed), "AI Seed to use for query")
-	figs = figs.NewString(kAiApiKey, envVal(eAiApiKey, ""), "AI API Key to use for query (leave empty for ollama)")
-	figs = figs.NewBool(kAiAlwaysAsk, envIs(eAiAlwaysAsk), "AI Always ask a question about the summary file you're summarizing and include the response in the output")
-	figs = figs.NewBool(kAiAlwaysFollowUp, envIs(eAiAlwaysFollowUp), "Look until Ctrl+C by asking additional prompts for the chat conversation with the AI about the summary")
+	figs = figs.NewBool(kAiEnabled, env.Bool(eDisableAi, false) == false, "Enable AI Features")
+	figs = figs.NewString(kAiProvider, env.String(eAiProvider, dAiProvider), "AI Provider to use. (eg. ollama, openai, claude)")
+	figs = figs.NewString(kAiModel, env.String(eAiModel, dAiModel), "AI Model to use for query")
+	figs = figs.NewInt(kAiMaxTokens, env.Int(eAiMaxTokens, dAiMaxTokens), "AI Max Tokens to use for query")
+	figs = figs.NewInt(kAiSeed, env.Int(eAiSeed, dAiSeed), "AI Seed to use for query")
+	figs = figs.NewString(kAiApiKey, env.String(eAiApiKey, ""), "AI API Key to use for query (leave empty for ollama)")
 
 	// validators run internal figtree Assure<Mutagensis><Rule> funcs as arguments to validate against
 	figs = figs.WithValidator(kSourceDir, figtree.AssureStringNotEmpty)

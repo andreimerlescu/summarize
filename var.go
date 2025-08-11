@@ -8,12 +8,6 @@ var (
 	// figs is a figtree of fruit for configurable command line arguments that bear fruit
 	figs figtree.Plant
 
-	aiPtr *agent
-
-	safeWords = []string{
-		"stop", "quit", "exit", "done",
-	}
-
 	defaultExclude = []string{
 		"useExpanded",
 	}
