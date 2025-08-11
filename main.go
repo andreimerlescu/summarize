@@ -255,7 +255,7 @@ func main() {
 			StartChat(&buf)
 			path := latestSummaryFile()
 			contents, err := os.ReadFile(path)
-			if err != nil {
+			if err == nil {
 				old := buf.String()
 				buf.Reset()
 				buf.WriteString("## Chat Log \n\n")
