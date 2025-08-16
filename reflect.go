@@ -21,13 +21,11 @@ func latestChatLog() string {
 	var latestModTime time.Time
 
 	for _, entry := range entries {
-		// Skip directories
 		if entry.IsDir() {
 			continue
 		}
 
 		filename := entry.Name()
-		// Check if file matches pattern: starts with "summary." and ends with ".md"
 		if strings.HasPrefix(filename, "chatlog.") && strings.HasSuffix(filename, ".md") {
 			fullPath := filepath.Join(kOutputDir, filename)
 
@@ -40,7 +38,6 @@ func latestChatLog() string {
 			}
 
 			modTime := fileInfo.ModTime()
-			// If this is the first matching file or it's newer than the current latest
 			if latestFile == "" || modTime.After(latestModTime) {
 				latestFile = fullPath
 				latestModTime = modTime

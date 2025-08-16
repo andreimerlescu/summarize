@@ -22,21 +22,28 @@ func main() {
 	configure()
 	capture("figs loading environment", figs.Load())
 
+	isDebug := *figs.Bool(kDebug)
+
 	inc := *figs.List(kIncludeExt)
 	if len(inc) == 1 && inc[0] == "useExpanded" {
 		figs.StoreList(kIncludeExt, extendedDefaultInclude)
 	}
-	fmt.Println(strings.Join(inc, ", "))
+
 	exc := *figs.List(kExcludeExt)
 	if len(exc) == 1 && exc[0] == "useExpanded" {
 		figs.StoreList(kExcludeExt, extendedDefaultExclude)
 	}
-	fmt.Println(strings.Join(exc, ", "))
+
 	ski := *figs.List(kSkipContains)
 	if len(ski) == 1 && ski[0] == "useExpanded" {
 		figs.StoreList(kSkipContains, extendedDefaultAvoid)
 	}
-	fmt.Println(strings.Join(ski, ", "))
+
+	if isDebug {
+		fmt.Println("INCLUDE: ", strings.Join(inc, ", "))
+		fmt.Println("EXCLUDE: ", strings.Join(exc, ", "))
+		fmt.Println("SKIP: ", strings.Join(ski, ", "))
+	}
 
 	if *figs.Bool(kShowExpanded) {
 		fmt.Println("Expanded:")
@@ -45,7 +52,6 @@ func main() {
 		fmt.Printf("-%s=%s\n", kSkipContains, strings.Join(*figs.List(kSkipContains), ","))
 		os.Exit(0)
 	}
-	isDebug := *figs.Bool(kDebug)
 
 	if *figs.Bool(kVersion) {
 		fmt.Println(Version())

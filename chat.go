@@ -96,6 +96,17 @@ type model struct {
 // initialModel creates the starting state of our application.
 // CORRECTED: The llm parameter is now the interface type.
 func initialModel(llm gollm.LLM, summary string) model {
+	if llm == nil {
+		errMsg := "LLM is nil. Please try again later."
+		return model{
+			llm:          nil,
+			messages:     []string{errorStyle.Render(errMsg)},
+			chatHistory:  []string{},
+			isGenerating: false,
+			err:          errors.New("empty summary"),
+			ctx:          context.Background(),
+		}
+	}
 	// Configure the text area for user input.
 	ta := textarea.New()
 	ta.Placeholder = "Send a message... (press Enter to send, Esc to quit)"
@@ -109,7 +120,18 @@ func initialModel(llm gollm.LLM, summary string) model {
 	vp := viewport.New(0, 0) // Width and height are set dynamically
 
 	if len(summary) == 0 {
-		panic("no summary")
+		errMsg := "No project summary available. Please provide a valid summary to start the chat."
+		return model{
+			llm:          llm,
+			textarea:     ta,
+			viewport:     vp,
+			summary:      summary,
+			messages:     []string{errorStyle.Render(errMsg)},
+			chatHistory:  []string{},
+			isGenerating: false,
+			err:          errors.New("empty summary"),
+			ctx:          context.Background(),
+		}
 	}
 
 	msg := fmt.Sprintf("%s %d bytes!", "Welcome to Summarize AI Chat! We've analyzed your project workspace and are ready to chat with you about ", len(summary))

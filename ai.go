@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"time"
 
@@ -24,7 +24,7 @@ func NewAI() gollm.LLM {
 	opts = append(opts, gollm.SetEnableCaching(*figs.Bool(kAiCachingEnabled)))
 	timeout := *figs.UnitDuration(kAiTimeout)
 	if timeout < time.Second {
-		panic("incorrect timeout value")
+		timeout = dTimeout * dTimeoutUnit
 	}
 	opts = append(opts, gollm.SetTimeout(*figs.UnitDuration(kAiTimeout)))
 	switch provider {
@@ -38,7 +38,8 @@ func NewAI() gollm.LLM {
 	}
 	llm, err := gollm.NewLLM(opts...)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("❌ Failed to initialize AI: %v\n", err)
+		return nil
 	}
 	return llm
 }
