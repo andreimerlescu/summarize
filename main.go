@@ -253,7 +253,7 @@ func main() {
 
 		if *figs.Bool(kChat) {
 			StartChat(&buf)
-			path := latestSummaryFile()
+			path := latestChatLog()
 			contents, err := os.ReadFile(path)
 			if err != nil {
 				old := buf.String()

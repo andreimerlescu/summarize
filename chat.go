@@ -50,13 +50,18 @@ func StartChat(buf *bytes.Buffer) {
 
 		// Create a timestamped filename.
 		timestamp := time.Now().Format("2006-01-02_15-04-05")
-		filename := fmt.Sprintf("chatlog_%s.txt", timestamp)
+		filename := fmt.Sprintf("chatlog_%s.md", timestamp)
 
-		// Join the styled messages into a single string for the log file.
-		logContent := strings.Join(m.messages, "\n")
+		var output bytes.Buffer
+		output.WriteString("# Summarize Chat Log " + timestamp + "\n\n")
+		for i := 0; i < len(m.messages); i++ {
+			message := m.messages[i]
+			output.WriteString(message)
+			output.WriteString("\n")
+		}
 
 		// Write the chat history to the file.
-		if writeErr := os.WriteFile(filepath.Join(*figs.String(kOutputDir), filename), []byte(logContent), 0644); writeErr != nil {
+		if writeErr := os.WriteFile(filepath.Join(*figs.String(kOutputDir), filename), output.Bytes(), 0644); writeErr != nil {
 			fmt.Printf("\n❌ Could not save chat log: %v\n", writeErr)
 		} else {
 			fmt.Printf("\n📝 Chat log saved to %s\n", filename)
@@ -84,6 +89,8 @@ type model struct {
 	summary      string
 	isGenerating bool
 	err          error
+	ctx          context.Context
+	chatHistory  []string
 }
 
 // initialModel creates the starting state of our application.
@@ -101,14 +108,22 @@ func initialModel(llm gollm.LLM, summary string) model {
 	// The viewport is the scrolling area for the chat history.
 	vp := viewport.New(0, 0) // Width and height are set dynamically
 
+	if len(summary) == 0 {
+		panic("no summary")
+	}
+
+	msg := fmt.Sprintf("%s %d bytes!", "Welcome to Summarize AI Chat! We've analyzed your project workspace and are ready to chat with you about ", len(summary))
+
 	return model{
 		llm:          llm,
 		textarea:     ta,
 		viewport:     vp,
 		summary:      summary,
-		messages:     []string{"Hi! I'm your local AI assistant called Summarize. How can I help you?"},
+		messages:     []string{msg},
+		chatHistory:  []string{},
 		isGenerating: false,
 		err:          nil,
+		ctx:          context.Background(),
 	}
 }
 
@@ -117,6 +132,7 @@ func initialModel(llm gollm.LLM, summary string) model {
 func (m model) generateResponseCmd() tea.Cmd {
 	return func() tea.Msg {
 		userInput := m.textarea.Value()
+		m.chatHistory = append(m.chatHistory, userInput)
 
 		var wc strings.Builder
 		breaker := "---ARM-GO-SUMMARIZE-BREAK-POINT---"
@@ -166,13 +182,19 @@ func (m model) generateResponseCmd() tea.Cmd {
 			wc.WriteString("\n")
 		}
 
+		var systemPrompt strings.Builder
+		systemPrompt.WriteString("This is a summary of a project that you are to respond to user prompts with the contents of this project.\n\n")
+		systemPrompt.WriteString(m.summary)
+		systemPrompt.WriteString("\n")
+
 		var (
 			response = ""
 			err      = errors.New("failed to ask agent for a response")
 			prompt   = gollm.NewPrompt(userInput,
-				gollm.WithContext(wc.String()),
-				gollm.WithDirectives("Only reply in raw ASCII.",
-					"Be concise and offer complete solutions",
+				gollm.WithContext(strings.Join(m.chatHistory, "\n")),
+				gollm.WithSystemPrompt(systemPrompt.String(), gollm.CacheTypeEphemeral),
+				gollm.WithMaxLength(7777),
+				gollm.WithDirectives("Be concise and offer complete solutions",
 					"Act as Commander Data from the USS Starship Enterprise acting as an AI Agent assisting the user",
 					"Refer to the user as Commander",
 					"Speak as if you were on a Military Base as a member of the USS Starship Enterprise",
@@ -180,11 +202,16 @@ func (m model) generateResponseCmd() tea.Cmd {
 					"When replying to followup requests, build on your previous answer",
 					"When a mistake is identified by the user, use the full previous response to modify and return",
 					"Do not be afraid to offend and always give an honest answer in as few words as possible",
-					"Do not format the output in markdown, use just plain text to STDOUT through a redirect or pipe, thus no formatting at all.",
+				),
+				gollm.WithOutput(
+					fmt.Sprintf("%s %d wide %d tall.", "Do not apply any formatting to the output"+
+						" text except for line breaks and spaces. Commands and codes should be indented by 4 spaces "+
+						"on the left and right side of the line and the text will render inside of a Golang BubbleTea"+
+						"TUI window that is ", m.viewport.Width-5, m.viewport.Height-5),
 				),
 			)
 		)
-		response, err = m.llm.Generate(context.Background(), prompt)
+		response, err = m.llm.Generate(m.ctx, prompt)
 		if err != nil {
 			return errorMsg{err} // On error, return an error message.
 		}

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func latestSummaryFile() string {
+func latestChatLog() string {
 	entries, err := os.ReadDir(kOutputDir)
 	if err != nil {
 		if *figs.Bool(kDebug) {
@@ -28,7 +28,7 @@ func latestSummaryFile() string {
 
 		filename := entry.Name()
 		// Check if file matches pattern: starts with "summary." and ends with ".md"
-		if strings.HasPrefix(filename, "summary.") && strings.HasSuffix(filename, ".md") {
+		if strings.HasPrefix(filename, "chatlog.") && strings.HasSuffix(filename, ".md") {
 			fullPath := filepath.Join(kOutputDir, filename)
 
 			fileInfo, err := entry.Info()

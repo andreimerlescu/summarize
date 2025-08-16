@@ -1,5 +1,7 @@
 package main
 
+import "time"
+
 const (
 	projectName string = "github.com/andreimerlescu/summarize"
 	tFormat     string = "2006.01.02.15.04.05.UTC"
@@ -28,25 +30,35 @@ const (
 	// eAlwaysCompress ENV string-as-bool (as "TRUE" or "true" for true) always sets -gz true in CLI argument parsing
 	eAlwaysCompress string = "SUMMARIZE_ALWAYS_COMPRESS"
 
-	eDisableAi   string = "SUMMARIZE_DISABLE_AI"
-	eAiProvider  string = "SUMMARIZE_AI_PROVIDER"
-	eAiModel     string = "SUMMARIZE_AI_MODEL"
-	eAiApiKey    string = "SUMMARIZE_AI_API_KEY"
-	eAiMaxTokens string = "SUMMARIZE_AI_MAX_TOKENS"
-	eAiSeed      string = "SUMMARIZE_AI_SEED"
+	eDisableAi           string = "SUMMARIZE_DISABLE_AI"
+	eAiProvider          string = "SUMMARIZE_AI_PROVIDER"
+	eAiModel             string = "SUMMARIZE_AI_MODEL"
+	eAiApiKey            string = "SUMMARIZE_AI_API_KEY"
+	eAiMaxTokens         string = "SUMMARIZE_AI_MAX_TOKENS"
+	eAiSeed              string = "SUMMARIZE_AI_SEED"
+	eAiMemory            string = "SUMMARIZE_AI_MEMORY"
+	eAiAlwaysEnableCache string = "SUMMARIZE_AI_ENABLE_CACHE"
+	eAiGlobalTimeout     string = "SUMMARIZE_AI_GLOBAL_TIMEOUT"
 
 	dAiSeed      int    = -1
 	dAiMaxTokens int    = 3000
 	dAiProvider  string = "ollama"
-	dAiModel     string = "gpt-oss:20b"
+	dAiModel     string = "qwen3:8b"
 	// dAiModel          string = "mistral-small3.2:24b"
+	dCachingEnabled bool          = true
+	dMemory         int           = 36963
+	dTimeout        time.Duration = 77
+	dTimeoutUnit    time.Duration = time.Second
 
-	kAiEnabled   string = "ai"
-	kAiProvider  string = "provider"
-	kAiModel     string = "model"
-	kAiApiKey    string = "api-key"
-	kAiMaxTokens string = "max-tokens"
-	kAiSeed      string = "seed"
+	kAiEnabled        string = "ai"
+	kAiProvider       string = "provider"
+	kAiModel          string = "model"
+	kAiApiKey         string = "api-key"
+	kAiMaxTokens      string = "max-tokens"
+	kAiSeed           string = "seed"
+	kMemory           string = "memory"
+	kAiCachingEnabled string = "caching"
+	kAiTimeout        string = "timeout"
 
 	kShowExpanded string = "expand"
 

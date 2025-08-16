@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/teilomillet/gollm"
 )
@@ -19,6 +20,13 @@ func NewAI() gollm.LLM {
 	if maxTokens > 0 {
 		opts = append(opts, gollm.SetMaxTokens(maxTokens))
 	}
+	opts = append(opts, gollm.SetMemory(*figs.Int(kMemory)))
+	opts = append(opts, gollm.SetEnableCaching(*figs.Bool(kAiCachingEnabled)))
+	timeout := *figs.UnitDuration(kAiTimeout)
+	if timeout < time.Second {
+		panic("incorrect timeout value")
+	}
+	opts = append(opts, gollm.SetTimeout(*figs.UnitDuration(kAiTimeout)))
 	switch provider {
 	case "ollama":
 		capture("unset OLLAMA_API_KEY env", os.Unsetenv("OLLAMA_API_KEY"))

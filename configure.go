@@ -43,12 +43,16 @@ func configure() {
 	figs = figs.NewInt(kAiMaxTokens, env.Int(eAiMaxTokens, dAiMaxTokens), "AI Max Tokens to use for query")
 	figs = figs.NewInt(kAiSeed, env.Int(eAiSeed, dAiSeed), "AI Seed to use for query")
 	figs = figs.NewString(kAiApiKey, env.String(eAiApiKey, ""), "AI API Key to use for query (leave empty for ollama)")
+	figs = figs.NewInt(kMemory, env.Int(eAiMemory, dMemory), "AI Memory to use for query")
+	figs = figs.NewBool(kAiCachingEnabled, env.Bool(eAiAlwaysEnableCache, dCachingEnabled), "Enable LLM caching")
+	figs = figs.NewUnitDuration(kAiTimeout, env.UnitDuration(eAiGlobalTimeout, dTimeoutUnit, dTimeout), dTimeoutUnit, "AI Timeout on each request allowed")
 
 	// validators run internal figtree Assure<Mutagensis><Rule> funcs as arguments to validate against
 	figs = figs.WithValidator(kSourceDir, figtree.AssureStringNotEmpty)
 	figs = figs.WithValidator(kOutputDir, figtree.AssureStringNotEmpty)
 	figs = figs.WithValidator(kFilename, figtree.AssureStringNotEmpty)
-	figs = figs.WithValidator(kMaxFiles, figtree.AssureIntInRange(1, 17_369))
+	figs = figs.WithValidator(kMaxFiles, figtree.AssureIntInRange(1, 369))
+	figs = figs.WithValidator(kMemory, figtree.AssureIntInRange(1, 17_369_369))
 	figs = figs.WithValidator(kMaxOutputSize, figtree.AssureInt64InRange(369, 369_369_369_369))
 	figs = figs.WithValidator(kAiSeed, figtree.AssureIntInRange(-1, 369_369_369_369))
 	figs = figs.WithValidator(kAiMaxTokens, figtree.AssureIntInRange(-1, 369_369_369_369))
