@@ -167,8 +167,8 @@ func (m model) generateResponseCmd() tea.Cmd {
 			wc.WriteString(" (int) height with ")
 			wc.WriteString(strconv.Itoa(m.viewport.VisibleLineCount()))
 			wc.WriteString(" (int) visible lines in the viewport. Your responses should singularly fit in the terminal" +
-				"window knowing full well that the wordwrap.String(<message>, m.viewport.Width)) is formatted in the bubble" +
-				"tea TUI. \n\n" +
+				"window. Be aware that your response will be formatted using wordwrap.String(<message>, m.viewport.Width) in the Bubbletea TUI, so ensure your message fits within the viewport width. " +
+				"\n\n" +
 				"The user expects you to be professional and keep focused on the language that you detect from the summary.\n" +
 				"Be prepared to answer questions about security, best practices, and security concerns that you have over" +
 				"the code. However, do not get distracted. Always follow the lead of the DevOps engineer. Do not be afraid to" +
