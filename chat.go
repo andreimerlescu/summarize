@@ -29,9 +29,9 @@ var (
 
 	// A slight border for the chat viewport
 	viewportStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("8")). // Gray
-			Padding(1)
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("8")). // Gray
+		Padding(1)
 )
 
 func StartChat(buf *bytes.Buffer) {
@@ -169,8 +169,7 @@ func (m model) generateResponseCmd() tea.Cmd {
 			wc.WriteString("The summarized project is:\n")
 			parts := strings.Split(m.summary, breaker)
 			if len(parts) == 2 {
-				oldPrefix := strings.Clone(parts[0])
-				oldSummary := strings.Clone(parts[1])
+				oldPrefix, oldSummary := parts[0], parts[1]
 				newSummary := oldPrefix + wc.String() + oldSummary
 				m.summary = newSummary
 				wc.Reset()
@@ -196,7 +195,7 @@ func (m model) generateResponseCmd() tea.Cmd {
 				"the code. However, do not get distracted. Always follow the lead of the DevOps engineer. Do not be afraid to" +
 				"offend. Your brutal honesty is welcome here and iron sharpens iron. Here is the summary now:\n" +
 				breaker + "\n")
-			oldSummary := strings.Clone(m.summary)
+			oldSummary := m.summary
 			newSummary := oldSummary + wc.String()
 			m.summary = newSummary
 			wc.Reset()

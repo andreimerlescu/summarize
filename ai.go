@@ -14,7 +14,7 @@ func NewAI() gollm.LLM {
 	var opts []gollm.ConfigOption
 	opts = append(opts, gollm.SetProvider(provider))
 	opts = append(opts, gollm.SetModel(model))
-	if seed > 1 {
+	if seed != -1 {
 		opts = append(opts, gollm.SetSeed(seed))
 	}
 	if maxTokens > 0 {
