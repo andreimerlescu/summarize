@@ -8,6 +8,8 @@ current working directory called `summaries`, that I recommend that you add to y
 
 ![Diagram](/assets/diagram.png)
 
+> You can also view this same diagram using [figma.com/board/summarize](https://www.figma.com/board/TImgInFTlbJEWZcZpJhHPO/Summarize-Binary-Flow?node-id=0-1&t=jBfERp6tFOxeOL2B-1)
+
 The **Summarize** package was designed for developers who wish to leverage the use of Artificial Intelligence while
 I've found it useful to leverage the `make summary` command in all of my projects. This way, if I need to ask an AI a
 question about a piece of code, I can capture the source code of the entire directory quickly and then just `cat` the
