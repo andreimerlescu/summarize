@@ -1,7 +1,10 @@
 package main
 
 import (
+	"sync"
+
 	"github.com/andreimerlescu/figtree/v2"
+	"github.com/andreimerlescu/sema"
 )
 
 var (
@@ -94,4 +97,16 @@ var (
 		".min.js", ".min.css", ".git/", ".svn/", ".vscode/", ".vs/", ".idea/", "logs/", "secrets/",
 		".venv/", "/site-packages", ".terraform/", "summaries/", "node_modules/", "/tmp", "tmp/", "logs/",
 	}
+
+	data                                                   *sync.Map
+	isDebug                                                bool
+	sourceDir                                              string
+	outputDir                                              string
+	inc, exc, ski, lIncludeExt, lExcludeExt, lSkipContains []string
+	errs                                                   []error
+	toUpdate                                               []mapData
+	wg, writerWG                                           *sync.WaitGroup
+	throttler, maxFileSemaphore                            sema.Semaphore
+	seen                                                   *seenStrings
+	resultsChan                                            chan Result
 )
