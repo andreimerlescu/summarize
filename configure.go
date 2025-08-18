@@ -8,7 +8,7 @@ import (
 	"github.com/andreimerlescu/goenv/env"
 )
 
-// init creates a new figtree with options to use CONFIG_FILE as a way of reading a YAML file while ignoring the env
+// configure creates a new figtree with options to use CONFIG_FILE as a way of reading a YAML file while ignoring the env
 func configure() {
 	// figs is a tree of figs that ignore the ENV
 	figs = figtree.With(figtree.Options{
