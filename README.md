@@ -1,12 +1,14 @@
 # Summarize 
 
-The **Summarize** package was designed for developers who wish to leverage the use of Artificial Intelligence while 
 working on a project. The `summarize` command give you a powerful interface that is managed by arguments and environment
 variables that define include/exclude extensions, and avoid substrings list while parsing paths. The binary has 
 concurrency built into it and has limits for the output file. It ignores its default output directory so it won't
 recursively build summaries upon itself. It defaults to writing to a new directory that it'll try to create in the
 current working directory called `summaries`, that I recommend that you add to your `.gitignore` and `.dockerignore`.
 
+![Diagram](/assets/diagram.png)
+
+The **Summarize** package was designed for developers who wish to leverage the use of Artificial Intelligence while
 I've found it useful to leverage the `make summary` command in all of my projects. This way, if I need to ask an AI a
 question about a piece of code, I can capture the source code of the entire directory quickly and then just `cat` the
 output file path provided and _voila_! The `-print` argument allows you to display the summary contents in the STDOUT

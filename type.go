@@ -30,4 +30,9 @@ type (
 		mu sync.RWMutex
 		m  map[string]bool
 	}
+
+	mapData struct {
+		Ext   string
+		Paths []string
+	}
 )
