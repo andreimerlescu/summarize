@@ -7,6 +7,7 @@ recursively build summaries upon itself. It defaults to writing to a new directo
 current working directory called `summaries`, that I recommend that you add to your `.gitignore` and `.dockerignore`.
 
 ![Diagram](/assets/diagram.png)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fandreimerlescu%2Fsummarize.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fandreimerlescu%2Fsummarize?ref=badge_shield)
 
 > You can also view this same diagram using [figma.com/board/summarize](https://www.figma.com/board/TImgInFTlbJEWZcZpJhHPO/Summarize-Binary-Flow?node-id=0-1&t=jBfERp6tFOxeOL2B-1)
 
@@ -229,3 +230,7 @@ defaultAvoid = []string{
 ## Contribution 
 
 Feel free to fork the project, submit a PR and contribute to open source projects. 
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fandreimerlescu%2Fsummarize.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fandreimerlescu%2Fsummarize?ref=badge_large)
