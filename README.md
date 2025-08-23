@@ -1,5 +1,12 @@
 # Summarize 
 
+![GitHub Release](https://img.shields.io/github/v/release/andreimerlescu/summarize)
+![GitHub License](https://img.shields.io/github/license/andreimerlescu/summarize)
+[![Test Summarize Tool](https://github.com/andreimerlescu/summarize/actions/workflows/test-summarize.yml/badge.svg)](https://github.com/andreimerlescu/summarize/actions/workflows/test-summarize.yml)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fandreimerlescu%2Figo.svg?type=shield&issueType=security)](https://app.fossa.com/projects/git%2Bgithub.com%2Fandreimerlescu%2Figo?ref=badge_shield&issueType=security) 
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fandreimerlescu%2Figo.svg?type=shield&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Fandreimerlescu%2Figo?ref=badge_shield&issueType=license) 
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/11077/badge)](https://www.bestpractices.dev/projects/11077)
+
 working on a project. The `summarize` command give you a powerful interface that is managed by arguments and environment
 variables that define include/exclude extensions, and avoid substrings list while parsing paths. The binary has 
 concurrency built into it and has limits for the output file. It ignores its default output directory so it won't
@@ -61,7 +68,7 @@ Once the program finishes running, the rendered file will look similar to:
 
 ## Installing
 
-Built for Go **1.24.0**. Universal application.
+Built for Go **1.24.5**. Universal application.
 
 ```bash
 go install github.com/andreimerlescu/summarize@latest
@@ -229,3 +236,29 @@ defaultAvoid = []string{
 ## Contribution 
 
 Feel free to fork the project, submit a PR and contribute to open source projects. 
+
+When submitting a new *Pull Request*, please ensure that you have done the following: 
+
+1. [ ] You've ⭐ *Starred* this repository. 
+2. [ ] You've 🍴*Forked* this repository.
+3. [ ] You have a new branch prefixed with `feature/` or `hotfix/`.
+4. [ ] Your new code includes tests either in `_test.go` or `test.sh`.
+5. [ ] Your code cannot break existing functionality.
+6. [ ] Your code cannot introduce new functionality that is antithetical to the matra of forever always free in service to others.
+7. [ ] Your code has been reviewed by yours truly and accepted.
+
+Upon completion of these 7 steps, I'll merge your PR and you'll automatically get added to the widget below!
+
+Just like with platforms like YouTube, where the hosts will say things like "please like comment and subscribe", the 
+same is here just in the form of: please *star*, *fork*, and *contribute* to this repository if you found value in it.
+
+<!-- Copy-paste in your Readme.md file -->
+
+<a href="https://next.ossinsight.io/widgets/official/compose-contributors?repo_id=961211609&limit=200" target="_blank" style="display: block" align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://next.ossinsight.io/widgets/official/compose-contributors/thumbnail.png?repo_id=961211609&limit=200&image_size=auto&color_scheme=dark" width="655" height="auto">
+    <img alt="Contributors of andreimerlescu/summarize" src="https://next.ossinsight.io/widgets/official/compose-contributors/thumbnail.png?repo_id=961211609&limit=200&image_size=auto&color_scheme=light" width="655" height="auto">
+  </picture>
+</a>
+
+<!-- Made with [OSS Insight](https://ossinsight.io/) -->
